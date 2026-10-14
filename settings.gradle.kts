@@ -10,7 +10,12 @@ dependencyResolutionManagement {
     repositories {
         mavenCentral()
         maven("https://repo.papermc.io/repository/maven-public/") {
-            content { includeGroup("io.papermc.paper") }
+            content {
+                includeGroup("io.papermc.paper")
+                includeGroup("io.papermc")
+                includeGroup("com.mojang")
+                includeGroup("net.md-5")
+            }
         }
         maven("https://repo.lucko.me/") {
             content { includeGroup("net.luckperms") }
