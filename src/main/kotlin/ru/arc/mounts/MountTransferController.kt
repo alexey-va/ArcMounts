@@ -156,8 +156,8 @@ class MountTransferController(
         val player = event.player as? Player ?: return
         scope.runLater(1) {
             if (!player.isOnline) return@runLater
-            val openType = player.openInventory.topInventory.type
-            if (openType == org.bukkit.event.inventory.InventoryType.CRAFTING) holder.back.invoke()
+            val openType = currentTopInventoryTypeOrNull(player.openInventory.topInventory)
+            if (openType == null || openType == org.bukkit.event.inventory.InventoryType.CRAFTING) holder.back.invoke()
         }
     }
 

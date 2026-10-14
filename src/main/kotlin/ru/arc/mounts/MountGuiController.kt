@@ -10,6 +10,7 @@ import org.bukkit.event.Listener
 import org.bukkit.event.inventory.ClickType
 import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.event.inventory.InventoryCloseEvent
+import org.bukkit.event.inventory.InventoryType
 import org.bukkit.inventory.Inventory
 import org.bukkit.inventory.InventoryHolder
 import org.bukkit.inventory.ItemFlag
@@ -26,6 +27,9 @@ import ru.arc.paper.menu.PaperMenuRuntime
 import kotlin.math.ceil
 
 private enum class MountScreen { LIST, DETAIL, PROGRESSION, TUNING, SKINS, CONFIRM }
+
+/** MockBukkit can return null here after a close even though Paper's API is annotated non-null. */
+internal fun currentTopInventoryTypeOrNull(inventory: Inventory?): InventoryType? = inventory?.type
 
 internal enum class MountListPurpose { COLLECTION, SHOP, UPGRADES, TRADE }
 
@@ -686,8 +690,8 @@ class MountGuiController(
         val parent = holder.parent ?: return
         scheduler.runLater(1) {
             if (!active || !player.isOnline) return@runLater
-            val openType = player.openInventory.topInventory.type
-            if (openType != org.bukkit.event.inventory.InventoryType.CRAFTING) return@runLater
+            val openType = currentTopInventoryTypeOrNull(player.openInventory.topInventory)
+            if (openType != null && openType != InventoryType.CRAFTING) return@runLater
             when (parent.screen) {
                 MountScreen.LIST,
                 MountScreen.DETAIL,

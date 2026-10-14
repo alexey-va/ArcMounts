@@ -34,7 +34,6 @@ kotlin {
 }
 
 val integrationTestSourceSet = sourceSets.create("integrationTest") {
-    kotlin.srcDir("src/integrationTest/kotlin")
     compileClasspath += sourceSets.main.get().output + sourceSets.test.get().output
     runtimeClasspath += sourceSets.main.get().output + sourceSets.test.get().output
 }
