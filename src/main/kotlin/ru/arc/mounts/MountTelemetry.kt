@@ -8,7 +8,10 @@ import java.util.UUID
 /** Optional domain telemetry routed through ARC's registered host service. */
 internal class MountTelemetry(private val plugin: Plugin) {
     fun recordProductOutcome(player: Player, operationId: String) {
-        provider()?.record(player.uniqueId, "arcmounts", "mounts", "mount_ride", null, operationId)
+        val telemetry = provider() ?: return
+        telemetry.recordActivity(player.uniqueId, "arc", "mechanic.outcome", "mount_ride", null,
+            mapOf("entry" to "gameplay", "feature" to "mounts"))
+        telemetry.record(player.uniqueId, "arcmounts", "mounts", "mount_ride", null, operationId)
     }
 
     fun recordActivity(
