@@ -17,7 +17,6 @@ import org.bukkit.event.inventory.InventoryCloseEvent
 import org.bukkit.event.inventory.InventoryType
 import org.junit.jupiter.api.Test
 import ru.arc.TestBase
-import ru.arc.util.customModelDataOrNull
 import java.time.Duration
 import java.util.concurrent.CompletableFuture
 
