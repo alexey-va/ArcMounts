@@ -6,10 +6,13 @@ import io.mockk.mockk
 import io.mockk.spyk
 import io.mockk.verify
 import io.papermc.paper.event.player.PlayerTrackEntityEvent
+import org.bukkit.Input
 import org.bukkit.NamespacedKey
 import org.bukkit.entity.LivingEntity
 import org.bukkit.util.Vector
 import org.junit.jupiter.api.Test
+import org.mockbukkit.mockbukkit.ServerMock
+import org.mockbukkit.mockbukkit.entity.PlayerMock
 import ru.arc.TestBase
 import ru.arc.core.ScheduledTask
 import ru.arc.core.TaskScheduler
@@ -18,7 +21,9 @@ import java.time.Duration
 class MountPlayerFlightLifecycleTest : TestBase() {
     @Test
     fun `player flight attaches and replays its passenger before restoring flight on cleanup`() {
-        val pilot = server.addPlayer("FlightCompanion")
+        val pilot = NeutralInputPlayer(server, "FlightCompanion")
+        server.addPlayer(pilot)
+        (server.getPlayer(pilot.uniqueId) === pilot) shouldBe true
         val originalAllowFlight = pilot.allowFlight
         val originalIsFlying = pilot.isFlying
         val originalFlySpeed = pilot.flySpeed
@@ -148,4 +153,10 @@ class MountPlayerFlightLifecycleTest : TestBase() {
         every { config.postFlightSlowFalling } returns Duration.ZERO
         every { config.message(any(), any()) } answers { secondArg() }
     }
+}
+
+private class NeutralInputPlayer(server: ServerMock, name: String) : PlayerMock(server, name) {
+    private val neutralInput = mockk<Input>(relaxed = true)
+
+    override fun getCurrentInput(): Input = neutralInput
 }
