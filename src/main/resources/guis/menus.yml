@@ -1,0 +1,76 @@
+# ArcMounts layouts from ARC's shared operator menu catalog.
+# The host owns all other layouts and operator-defined templates.
+menus:
+  layouts:
+    mount-list:
+      schema-version: 1
+      rows: 6
+      elements:
+        previous: { slot: 45, template: background }
+        filter: { slot: 49, template: background }
+        next: { slot: 53, template: background }
+      regions:
+        mounts: { slots: ['0-44'] }
+
+    mount-detail:
+      schema-version: 1
+      rows: 5
+      elements:
+        icon: { slot: 4, template: background }
+        favorite: { slot: 13, template: background }
+        upgrade: { slot: 20, template: background }
+        summon: { slot: 22, template: background }
+        settings: { slot: 24, template: background }
+        back: { slot: 36, template: background }
+        whistle: { slot: 42, template: background }
+
+    mount-progression:
+      schema-version: 1
+      rows: 3
+      elements:
+        info: { slot: 4, template: background }
+        back: { slot: 18, template: background }
+      regions:
+        levels: { slots: [11, 13, 15] }
+
+    mount-tuning:
+      schema-version: 1
+      rows: 6
+      elements:
+        skins: { slot: 2, template: background }
+        info: { slot: 4, template: background }
+        glow: { slot: 6, template: background }
+        back: { slot: 45, template: background }
+        rider-view: { slot: 49, template: background }
+      regions:
+        speeds: { slots: ['11-15'] }
+        steps: { slots: ['20-24'] }
+        sizes: { slots: ['29-33'] }
+        abilities: { slots: [38, 39, 40, 41, 42] }
+
+    mount-skins:
+      schema-version: 1
+      rows: 6
+      elements:
+        previous: { slot: 45, template: background }
+        back: { slot: 49, template: background }
+        next: { slot: 53, template: background }
+      regions:
+        skins: { slots: ['0-44'] }
+
+    mount-confirm:
+      schema-version: 1
+      rows: 3
+      elements:
+        cancel: { slot: 11, template: background }
+        info: { slot: 13, template: background }
+        accept: { slot: 15, template: background }
+    # The store keeps a custom transactional click controller, but its physical
+    # topology is owned by this validated catalog. The region order maps to
+    # logical StoreData slots and therefore may be rearranged freely.
+
+  templates:
+    background:
+      material: GRAY_STAINED_GLASS_PANE
+      custom-model-data: 11000
+      hide-tooltip: true

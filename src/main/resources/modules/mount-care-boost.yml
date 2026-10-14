@@ -1,0 +1,4 @@
+# Daily mount-yard care entitlement. Existing records keep their grant-time snapshot.
+speed-multiplier: 1.05
+duration: 2h
+cooldown: 24h

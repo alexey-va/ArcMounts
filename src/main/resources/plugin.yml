@@ -1,0 +1,22 @@
+name: ArcMounts
+version: '${version}'
+main: ru.arc.mounts.ArcMountsPlugin
+api-version: '1.20'
+depend: [ARC]
+softdepend:
+  - packetevents
+  - LuckPerms
+commands:
+  mount:
+    description: Open and administer the mount collection
+    usage: /mount [menu|help|admin]
+    permission: arc.mounts.use
+permissions:
+  arc.mounts.admin:
+    description: Administer mount ownership and summon test mounts
+    default: op
+    children:
+      arc.mounts.use: true
+  arc.mounts.use:
+    description: Open and use the mount collection
+    default: false

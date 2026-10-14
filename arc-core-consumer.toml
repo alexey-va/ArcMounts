@@ -1,0 +1,17 @@
+schema = 1
+platform = "paper"
+core_version = "2.7.22"
+
+capabilities = [
+  "atomic-files",
+  "health",
+  "integration-testing",
+  "localized-text",
+  "logging",
+  "one-time-use",
+  "paper-menu",
+  "paper-testing",
+  "runtime",
+  "scheduling",
+  "sql",
+]

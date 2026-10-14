@@ -1,0 +1,4055 @@
+# Native ARC Mounts 1.0. Runtime mirrors override enabled, purchases-enabled and allowed-worlds.
+enabled: false
+ownership-migration-complete: false
+purchases-enabled: false
+allowed-worlds: []
+session-duration: 12h
+admin-session-duration: 10s
+
+controls:
+  double-sneak-window: 450ms
+  hint-cooldown: 5s
+
+# This section is read asynchronously every 2 seconds; no ARC reload or re-summon needed.
+# Scale affects both horizontal distance and height of native carrier seats.
+passengers:
+  carrier-scale: 0.8
+  carrier-yaw-offset: 90.0
+  single-carrier-yaw-offset: 180.0
+  # Optional per-mount overrides of the same three keys, e.g. polar_bear or ravager.
+  mounts: {}
+
+quick-summon:
+  # Uses the client's "swap item with offhand" action, F by default, while sneaking.
+  sneak-swap-hands: true
+  # Reusable PDC-marked goat horn issued from the mount details menu.
+  whistle: true
+
+rider-view:
+  # Hide only from the rider, with hysteresis to prevent flicker near the threshold.
+  hide-flying-mount: true
+  hide-at-pitch: 35
+  show-at-pitch: 20
+
+movement:
+  walking-speed-scale: 0.16
+  flying-speed-scale: 0.55
+  swimming-speed-scale: 0.45
+  # Zero disables ARC inertia, including reversals. Native player-flight keeps vanilla physics.
+  acceleration-time: 0ms
+  deceleration-time: 0ms
+  turn-time: 0ms
+  sprint-multiplier: 1.15
+  jump-velocity: 0.5
+  vertical-speed-ratio: 0.75
+  maximum-vertical-speed: 0.65
+  flight-pitch-influence: 0.65
+  maximum-speed-blocks-per-tick: 1.05
+  maximum-height-above-world: 32
+  # Cancels Minecraft's 0.2 airborne block-breaking multiplier while flying.
+  compensate-airborne-mining: true
+
+tuning:
+  # Free player-selected percentage of the maximum speed unlocked by the current level.
+  speed-percentages: [50, 65, 80, 90, 100]
+  # Walking mounts only. Higher values intentionally let mounts climb walls.
+  walking-step-heights: [1.10, 1.50, 2.00, 3.00, 4.00]
+  # Level 1 clears ordinary blocks; levels 2 and 3 unlock two- and four-block climbing.
+  walking-max-step-height-by-level: [1.10, 2.00, 4.00]
+
+# Every mount receives separately owned extremes, sold for tokens or granted
+# through mount administration and rewards. Ordinary tuning remains free.
+size-tuning-defaults:
+  standard: {id: standard, name: "Обычный ×1", multiplier: 1.0}
+  tiny: {id: keychain, name: "Крошечный ×0.1", multiplier: 0.1, price: 40, currency: tokens}
+  giant: {id: colossal, name: "Колоссальный ×<scale>", multiplier: 10.0, price: 100, currency: tokens}
+
+safety:
+  post-flight-slow-falling: 8s
+  idle-timeout: 5m
+  summon-cooldown: 2s
+  rider-knockoff-damage: 6.0
+
+gui:
+  copy:
+    common:
+      blank: ""
+      action-footer: "<#8c8c8c>[<#92bed8>▶<#8c8c8c>] <#92bed8>ЛКМ<#e6fff3> — <action>"
+      action-footer-warning: "<#8c8c8c>[<#ff9f0f>▶<#8c8c8c>] <#ff9f0f>ЛКМ<#e6fff3> — <action>"
+      footer-back: "<#8c8c8c>[<#92bed8>▶<#8c8c8c>] <#92bed8>ЛКМ<#e6fff3> — вернуться"
+      footer-open: "<#8c8c8c>[<#92bed8>▶<#8c8c8c>] <#92bed8>ЛКМ<#e6fff3> — открыть"
+      footer-open-purchase: "<#8c8c8c>[<#92bed8>▶<#8c8c8c>] <#92bed8>ЛКМ<#e6fff3> — открыть покупку"
+      footer-select: "<#8c8c8c>[<#92bed8>▶<#8c8c8c>] <#92bed8>ЛКМ<#e6fff3> — выбрать"
+      footer-summon: "<#8c8c8c>[<#92bed8>▶<#8c8c8c>] <#92bed8>ЛКМ<#e6fff3> — призвать"
+      footer-enable: "<#8c8c8c>[<#92bed8>▶<#8c8c8c>] <#92bed8>ЛКМ<#e6fff3> — включить"
+      footer-disable: "<#8c8c8c>[<#92bed8>▶<#8c8c8c>] <#92bed8>ЛКМ<#e6fff3> — выключить"
+      footer-get: "<#8c8c8c>[<#92bed8>▶<#8c8c8c>] <#92bed8>ЛКМ<#e6fff3> — получить"
+      footer-buy: "<#8c8c8c>[<#ff9f0f>▶<#8c8c8c>] <#ff9f0f>ЛКМ<#e6fff3> — купить"
+      footer-cancel: "<#8c8c8c>[<#92bed8>▶<#8c8c8c>] <#92bed8>ЛКМ<#e6fff3> — отменить"
+      selected: "<#2bba43>Выбрано"
+      purchases-at-spawn: "<#ff9f0f>Покупка: Гектор или Эмма во дворе маунтов на спавне."
+      back-name: "<#92bed8>Назад"
+      price: "<#8c8c8c>Цена: <#ffacd5><price> <white><bold:false>💰</bold></white>"
+      price-vault: "<#8c8c8c>Цена: <#ffacd5><price> <white><bold:false>💰</bold></white>"
+      price-tokens: "<#8c8c8c>Цена: <#ffacd5><price> <currency>"
+      balance: "<#8c8c8c>Баланс: <#ffacd5><balance> <white><bold:false>💰</bold></white>"
+      remaining: "<#8c8c8c>Останется: <#ffacd5><remaining> <white><bold:false>💰</bold></white>"
+      missing: "<#c42323>Не хватает: <#ffacd5><missing> <white><bold:false>💰</bold></white>"
+      debit: "<#8c8c8c>Будет списано: <#ffacd5><price> <white><bold:false>💰</bold></white>"
+      duration-hours: "<value> ч"
+      duration-minutes: "<value> мин"
+      duration-seconds: "<value> сек"
+    currencies:
+      tokens: "<#ffacd5>жетонов"
+    list:
+      type-walking-color: "<gray>"
+      type-flying-color: "<green>"
+      type-swimming-color: "<aqua>"
+      type-walking-name: "Пеший"
+      type-flying-name: "Летающий"
+      type-swimming-name: "Водный"
+      rarity-common: "<white>Обычный"
+      rarity-uncommon: "<green>Необычный"
+      rarity-rare: "<aqua>Редкий"
+      rarity-epic: "<light_purple>Эпический"
+      rarity-legendary: "<gold>Легендарный"
+      previous-name: "<#92bed8>Предыдущая страница"
+      previous-action: "перейти назад"
+      previous-footer: "<#8c8c8c>[<#92bed8>▶<#8c8c8c>] <#92bed8>ЛКМ<#e6fff3> — перейти назад"
+      next-name: "<#92bed8>Следующая страница"
+      next-action: "перейти вперёд"
+      next-footer: "<#8c8c8c>[<#92bed8>▶<#8c8c8c>] <#92bed8>ЛКМ<#e6fff3> — перейти вперёд"
+      page: "<#8c8c8c>Страница: <#e6fff3><page>/<pages>"
+      filter-name: "<#92bed8>Фильтр коллекции"
+      filter-category-all: "Все"
+      filter-category-flying: "Воздушные"
+      filter-category-walking: "Наземные"
+      filter-category-swimming: "Водные"
+      filter-show-all: "только полученные"
+      filter-show-owned: "только полученные"
+      filter-stats:
+        - "<#8c8c8c>Категория: <#e6fff3><category>"
+        - "<#8c8c8c>Показано: <#e6fff3><shown>/<total>"
+      filter-footer: "<#8c8c8c>[<#92bed8>▶<#8c8c8c>] <#92bed8>ЛКМ<#b8b8b8> — сменить категорию"
+      mount-upgrades-level-footer: "<#92bed8>ЛКМ<#e6fff3> — повышение уровня"
+      mount-upgrades-ability-footer: "<#ff9f0f>ПКМ<#e6fff3> — покупка улучшений"
+      empty-title: "<#ffcf70>Коллекция пока пуста"
+      empty-filter-title: "<#ffcf70>В этой категории пока пусто"
+      empty-shop-title: "<#ffcf70>Магазин пока пуст"
+      empty-lore:
+        - ""
+        - "<#b8b8b8>Маунтов можно приобрести у"
+        - "<#b8b8b8>Гектора во дворе маунтов на спавне."
+      empty-filter-lore:
+        - ""
+        - "<#b8b8b8>Смените категорию внизу меню."
+      empty-shop-lore:
+        - ""
+        - "<#b8b8b8>Нет доступных маунтов."
+      mount-owned-name: "<#ffacd5><mount>"
+      mount-owned-core:
+        - "<#2bba43>✔ Получен"
+        - "<rarity>"
+        - ""
+        - "<#8c8c8c>Тип: <type-value>"
+        - "<#8c8c8c>Уровень: <#e6fff3><level>/<max-level>"
+        - "<#8c8c8c>Облик: <#e6fff3><skin>"
+      mount-owned-footer: "<#8c8c8c>[<#92bed8>▶<#8c8c8c>] <#92bed8>ЛКМ<#e6fff3> — призвать <#8c8c8c>· <#92bed8>ПКМ<#e6fff3> — открыть"
+      features-title: "<#92bed8>Особенности"
+      feature-name: "<#ffacd5>• <feature>"
+      feature-description: "<#8c8c8c>  <feature-description>"
+      passenger-feature-name: "Пассажирские места: <passengers>"
+      passenger-feature-description: "Дополнительных мест: <passengers>"
+      passenger-feature-action: "<#8c8c8c>  <#92bed8>ПКМ по маунту<#e6fff3> — сесть пассажиром"
+      mount-acquirable-name: "<#92bed8><mount>"
+      mount-acquirable-core:
+        - "<#ff9f0f>Доступен к получению"
+        - "<rarity>"
+        - ""
+        - "<#8c8c8c>Получение: <#e6fff3><acquisition>"
+      mount-acquirable-footer: "<#8c8c8c>[<#92bed8>▶<#8c8c8c>] <#92bed8>ЛКМ<#e6fff3> — открыть получение"
+      mount-locked-name: "<#c42323><mount>"
+      mount-locked-core:
+        - "<#c42323>✘ Не получен"
+        - "<rarity>"
+        - ""
+        - "<#8c8c8c>Получение: <#e6fff3><acquisition>"
+      back-description: "<#8c8c8c>Вернуться в главное меню."
+    detail:
+      back-description: "<#8c8c8c>Вернуться к коллекции."
+      abilities-title: "<#20252b><bold>Способности: <mount></bold>"
+      abilities-summary-name: "<#92bed8>Способности маунта"
+      abilities-summary-title: "<#8c8c8c>Все способности в одном списке:"
+      abilities-summary-line: "<state> <#e6fff3><ability>"
+      abilities-summary-footer: "<#8c8c8c>Открой карточку, чтобы выбрать способность."
+      abilities-summary-empty:
+        - "<#8c8c8c>У этого маунта нет покупных способностей."
+      mount-locked-state: "<#c42323>✘ Не получен"
+      locked-acquisition: "<#8c8c8c>Получение: <#e6fff3><acquisition>"
+      description-line: "<#e6fff3><mount-description>"
+      innate-ability-line: "<#8c8c8c>Особенность: <#ffacd5><ability>"
+      innate-description: "<#8c8c8c><ability-description>"
+      passenger-feature-line: "<#8c8c8c>Особенность: <#ffacd5>Пассажирские места: <passengers>"
+      passenger-feature-action: "<#8c8c8c><#92bed8>ПКМ по маунту<#e6fff3> — сесть пассажиром"
+      effect-owned-line: "<#8c8c8c>Эффект: <#ffacd5><ability>"
+      upgrade-available-line: "<#8c8c8c>Улучшение: <#92bed8><ability> <#969696>(не куплено)"
+      behavior-line: "<#8c8c8c>Особенность: <#ffacd5><feature>"
+      behavior-description: "<#8c8c8c><behavior-description>"
+      mount-state-lore:
+        - "<#ffacd5>★ Любимый маунт"
+        - "<#2bba43>✔ Получен"
+        - "<rarity>"
+        - ""
+      mount-stats-core-lore:
+        - ""
+        - "<#92bed8>Характеристики"
+        - "<#8c8c8c>Тип: <type-value>"
+        - "<#8c8c8c>Уровень: <#e6fff3><level>/<max-level>"
+        - "<#8c8c8c>Скорость: <#e6fff3><speed>"
+        - "<#8c8c8c>Подъём: <#e6fff3><step> блока"
+        - "<#8c8c8c>Облик: <#e6fff3><skin>"
+      favorite-selected-name: "<#ffacd5>Любимый маунт"
+      favorite-selected-lore:
+        - "<#2bba43>Выбран для быстрого призыва."
+        - ""
+        - "<#8c8c8c>Shift + F или свисток — призвать."
+      favorite-locked-name: "<#969696>Любимый маунт недоступен"
+      favorite-locked-lore:
+        - "<#8c8c8c>Сначала получите этого маунта."
+      favorite-available-name: "<#ffacd5>Выбрать любимым"
+      favorite-available-lore:
+        - "<#8c8c8c>Использовать для Shift + F и свистка."
+      upgrade-name: "<#92bed8>Развитие и тюнинг"
+      upgrade-lore:
+        - "<#8c8c8c>Уровень: <#e6fff3><level>/<max-level>"
+        - "<#8c8c8c>Скорость: <#e6fff3><speed-percent>%"
+        - "<#8c8c8c>Подъём: <#e6fff3><step> блока"
+        - "<#8c8c8c>Размер: <#e6fff3><size>"
+      upgrade-locked-lore:
+        - "<#8c8c8c>Уровень: <#e6fff3><level>/<max-level>"
+      summon-name: "<#92bed8>Призвать маунта"
+      summon-lore:
+        - "<#8c8c8c>Сессия: <#e6fff3><session>"
+        - "<#8c8c8c>Исчезнет без движения через <#e6fff3><idle>"
+      summon-locked-name: "<#c42323>Маунт недоступен"
+      summon-locked-lore:
+        - "<#8c8c8c>Сначала получите первый уровень."
+      glow-enabled-name: "<#2bba43>Свечение: включено"
+      glow-disabled-name: "<#969696>Свечение: выключено"
+      glow-enabled-lore:
+        - "<#8c8c8c>Свечение куплено навсегда."
+      glow-locked-name: "<#c42323>Свечение недоступно"
+      glow-locked-lore:
+        - "<#8c8c8c>Сначала получите маунта."
+      glow-buy-name: "<#c42323>Купить свечение"
+      glow-unavailable-name: "<#969696>Свечение недоступно"
+      glow-unavailable-lore:
+        - "<#8c8c8c>Это украшение не продаётся."
+      skins-name: "<#ffacd5>Облики и украшения"
+      skins-lore:
+        - "<#8c8c8c>Выбран: <#e6fff3><skin>"
+        - "<#8c8c8c>Получено: <#e6fff3><owned>/<available>"
+      skins-locked-name: "<#969696>Облики недоступны"
+      skins-locked-lore:
+        - "<#8c8c8c>Сначала получите маунта."
+      ability-owned-name: "<#2bba43><ability>"
+      ability-available-name: "<#c42323><ability>"
+      ability-description: "<#8c8c8c><ability-description>"
+      ability-speed: "<#8c8c8c>Скорость маунта: <#2bba43>+<increase>%"
+      ability-owned: "<#2bba43>Куплено навсегда"
+      whistle-owned-name: "<#2bba43>Свисток уже получен"
+      whistle-owned-lore:
+        - "<#8c8c8c>Он лежит у вас в инвентаре."
+      whistle-disabled-name: "<#969696>Свисток недоступен"
+      whistle-disabled-lore:
+        - "<#8c8c8c>Он отключён на этом сервере."
+      whistle-favorite-required-name: "<#969696>Свисток недоступен"
+      whistle-favorite-required-lore:
+        - "<#8c8c8c>Сначала выберите любимого маунта."
+      whistle-full-name: "<#969696>Нет места для свистка"
+      whistle-full-lore:
+        - "<#8c8c8c>Освободите слот в инвентаре."
+      whistle-available-name: "<#ffacd5>Получить свисток"
+      whistle-available-lore:
+        - "<#8c8c8c>ПКМ свистком — призвать любимого маунта."
+    progression:
+      tuning-title: "<#20252b><bold><mount></bold>"
+      back-description: "<#8c8c8c>Вернуться к маунту."
+      tuning-back-description: "<#8c8c8c>Вернуться к уровням маунта."
+      size-scale: "<#8c8c8c>Масштаб: <#e6fff3>×<scale>"
+      size-special: "<#ff9f0f>Особый размер"
+      size-special-source: "<#8c8c8c>Награда событий и особых активностей."
+      mount-required: "<#c42323>Сначала получите маунта"
+      unlocks-at-level: "<#ff9f0f>Откроется на уровне <level>"
+      higher-level: "выше"
+      levels-info-name: "<#92bed8>Уровни маунта"
+      levels-info-lore:
+        - "<#8c8c8c>Текущий уровень: <#e6fff3><level>/<max-level>"
+        - ""
+        - "<#8c8c8c>Выберите карточку доступного уровня,"
+        - "<#8c8c8c>чтобы посмотреть цену и открыть покупку."
+      info-name: "<#92bed8>Профиль движения"
+      info-locked-lore:
+        - "<#8c8c8c>Уровень открывает максимум характеристик."
+        - "<#8c8c8c>Вы сами выбираете значение внутри предела."
+        - ""
+        - "<#c42323>Сначала получите маунта ниже."
+      info-lore:
+        - "<#8c8c8c>Уровень открывает максимум характеристик."
+        - "<#8c8c8c>Вы сами выбираете значение внутри предела."
+        - ""
+        - "<#8c8c8c>Скорость: <#e6fff3><current-speed> <#8c8c8c>/ <maximum-speed>"
+        - "<#8c8c8c>Подъём: <#e6fff3><step> <#8c8c8c>/ <maximum-step> блока"
+        - "<#8c8c8c>Размер: <#e6fff3><size>"
+        - ""
+        - "<#969696>Тюнинг бесплатный и сохраняется между серверами."
+      tuning-name: "<#92bed8>Настроить маунта"
+      tuning-lore:
+        - "<#8c8c8c>Скорость, подъём, размер и обзор всадника."
+        - ""
+        - "<#92bed8>ЛКМ — открыть настройки"
+      tuning-locked-lore:
+        - "<#c42323>Сначала получите маунта."
+      max-level-name: "<#2bba43>Максимальный уровень"
+      max-level-lore:
+        - "<#8c8c8c>Все пределы характеристик открыты."
+      special-name: "<#969696>Особое развитие"
+      special-lore:
+        - "<#8c8c8c><acquisition>"
+      level-name: "<#92bed8>Уровень <level>"
+      unlock-name: "<#92bed8>Получить маунта"
+      level-speed-upgrade: "<#8c8c8c>Скорость: <#e6fff3><speed-before> <#8c8c8c>→ <#2bba43><speed-after>"
+      level-speed-initial: "<#8c8c8c>Скорость: <#e6fff3><speed>"
+      level-increase: "<#8c8c8c>Прирост: <#2bba43>+<increase>%"
+      level-handling: "<#8c8c8c>Управляемость: <#e6fff3>×<handling>"
+      level-sprint: "<#8c8c8c>Форсаж: <#e6fff3>×<sprint>"
+      level-step-initial: "<#8c8c8c>Макс. подъём: <#e6fff3><step> блока"
+      level-step-upgrade: "<#8c8c8c>Макс. подъём: <#e6fff3><step-before> <#8c8c8c>→ <#2bba43><step-after> блока"
+      level-step: "<#8c8c8c>Подъём: <#e6fff3><step> блока"
+      level-card-owned-name: "<#2bba43>Уровень <level> · открыт"
+      level-card-available-name: "<#c42323>Уровень <level> · доступен"
+      level-card-locked-name: "<#c42323>Уровень <level> · закрыт"
+      level-card-owned: "<#2bba43>Уже открыто"
+      level-card-locked: "<#969696>Сначала откройте предыдущий уровень"
+      level-card-special: "<#ff9f0f><acquisition>"
+      speed-name: "<#92bed8>Скорость: <percentage>%"
+      speed-selected-name: "<#2bba43>Скорость: <percentage>%"
+      speed-lore:
+        - "<#8c8c8c>Фактически: <#e6fff3><actual-speed>"
+        - "<#8c8c8c>От максимума уровня: <#e6fff3><percentage>%"
+      step-name: "<#92bed8>Подъём: <step> блока"
+      step-selected-name: "<#2bba43>Подъём: <step> блока"
+      step-locked-name: "<#c42323>Подъём: <step> блока"
+      step-lore:
+        - "<#8c8c8c>Маунт автоматически заходит"
+        - "<#8c8c8c>на препятствия этой высоты."
+      step-high-warning: "<#ff9f0f>Высокий подъём неудобен под низким потолком."
+      step-not-applicable-name: "<#969696>Подъём не используется"
+      step-not-applicable-lore:
+        - "<#8c8c8c>Эта настройка доступна только пешим маунтам."
+      size-name: "<#92bed8>Размер: <size>"
+      size-selected-name: "<#2bba43>Размер: <size>"
+      size-locked-name: "<#c42323>Размер: <size>"
+      rider-view-auto-name: "<#2bba43>Корпус: скрывается"
+      rider-view-visible-name: "<#92bed8>Корпус: всегда виден"
+      rider-view-lore:
+        - "<#8c8c8c>Скрывает маунта только для всадника,"
+        - "<#8c8c8c>когда корпус перекрывает обзор."
+        - "<#8c8c8c>У гигантов срабатывает раньше."
+    skins:
+      back-description: "<#8c8c8c>Вернуться к маунту."
+      classic-name: "Классический"
+      classic-selected-name: "<#2bba43>Классический"
+      classic-available-name: "<#e6fff3>Классический"
+      classic-description: "<#8c8c8c>Базовый облик без следа."
+      trail: "<#8c8c8c>След: <#e6fff3><trail>"
+      age: "<#8c8c8c>Возраст: <#e6fff3><age>"
+      age-baby: "малыш"
+      age-adult: "взрослый"
+      size: "<#8c8c8c>Размер: <#e6fff3>×<scale>"
+      variant: "<#8c8c8c>Вариант: <#e6fff3><variant>"
+      pattern: "<#8c8c8c>Узор: <#e6fff3><pattern>"
+      equipment: "<#8c8c8c>Экипировка: <#e6fff3><equipment>"
+      equipment-none: "без экипировки"
+      equipment-netherite: "незеритовый комплект"
+      equipment-diamond: "алмазный комплект"
+      equipment-iron: "железный комплект"
+      equipment-golden: "золотой комплект"
+      equipment-special: "особый комплект"
+      base-variant: "<#8c8c8c>Вариант базового облика без следа."
+      variants:
+        cold: "холодный"
+        temperate: "умеренный"
+        warm: "тропический"
+        red: "рыжий"
+        snow: "снежный"
+        brown: "коричневый"
+        white: "белый"
+        black: "чёрный"
+        creamy: "кремовый"
+        chestnut: "каштановый"
+        gray: "серый"
+        dark-brown: "тёмно-коричневый"
+      skin-selected-name: "<#2bba43><skin>"
+      skin-owned-name: "<#ffacd5><skin>"
+      skin-buy-name: "<#c42323><skin>"
+      special-reward: "<#ff9f0f>Особая награда"
+    confirm:
+      cancel-name: "<#c42323>Отменить"
+      cancel-description: "<#8c8c8c>Вернуться без покупки."
+      unavailable-name: "<#c42323>Экономика недоступна"
+      insufficient-name: "<#c42323>Недостаточно средств"
+      accept-name: "<#ff9f0f>Подтвердить покупку"
+      loading-name: "<#969696>Покупка выполняется…"
+      economy-unavailable-line: "<#c42323>Баланс сейчас недоступен"
+      info-name: "<#ffacd5><skin>"
+      level-name: "<#92bed8>Уровень <level>"
+      maximum-speed: "<#8c8c8c>Максимальная скорость: <#e6fff3><speed>"
+      maximum-step: "<#8c8c8c>Максимальный подъём: <#e6fff3><step> блока"
+      glow-name: "<#92bed8>Свечение"
+      glow-permanent-line: "<#8c8c8c>Косметика покупается навсегда."
+      ability-name: "<#92bed8><ability>"
+      ability-description: "<#8c8c8c><ability-description>"
+      mount-line: "<#8c8c8c>Маунт: <#e6fff3><mount>"
+      permanent-line: "<#8c8c8c>Облик покупается навсегда."
+  list-title: "<#20252b><bold>Коллекция маунтов</bold>"
+  detail-title: "<#20252b><bold><mount></bold>"
+  progression-title: "<#20252b><bold>Развитие маунта</bold>"
+  skins-title: "<#20252b><bold>Облики маунта</bold>"
+  confirm-title: "<#20252b><bold>Покупка маунта</bold>"
+  back-command: m
+
+messages:
+  ground-controls: "<gray>WASD — движение, Space — прыжок, двойной Shift — спешиться"
+  native-flight-controls: "<gray>WASD — полёт по взгляду, Space — вверх, двойной Shift — спешиться"
+  player-flight-controls: "<gray>WASD — полёт, Space — вверх, Shift — вниз, двойной Shift — завершить"
+  camel-controls: "<gray>WASD — движение, удерживайте Space и отпустите — рывок, двойной Shift — спешиться"
+  horse-controls: "<gray>WASD — движение, удерживайте Space и отпустите — прыжок, двойной Shift — спешиться"
+  flight-controls: "<gray>WASD — движение, Space — вверх, Shift — вниз, двойной Shift — спешиться"
+  dismount-hint: "<yellow>Ещё раз Shift — спешиться"
+  passenger-boarded: "<green>Вы заняли пассажирское место. <gray>Shift — спешиться; управляет всадник."
+  passenger-preparing: "<yellow>Сиденья готовятся. Попробуйте через пару секунд."
+  passenger-full: "<yellow>Все пассажирские места заняты."
+  passenger-not-supported: "<red>У этого маунта нет пассажирских мест."
+  passenger-already-riding: "<yellow>Сначала спешитесь с текущего транспорта."
+  passenger-driver-required: "<yellow>Сначала дождитесь всадника маунта."
+  passenger-board-failed: "<red>Не удалось сесть. Попробуйте ещё раз рядом с маунтом."
+  descending: "<aqua>Снижение… <gray>двойной Shift — спешиться"
+  expired: "<gray>Время поездки закончилось."
+  already-riding: "<red>Вы уже используете маунта."
+  already-in-vehicle: "<red>Сначала покиньте текущее транспортное средство."
+  world-not-allowed: "<red>В этом мире маунты недоступны."
+  water-required: "<aqua>Водного маунта можно призвать только в воде."
+  summon-cooldown: "<yellow>Подождите немного перед повторным призывом."
+  spawn-failed: "<red>Не удалось призвать маунта."
+  favorite-not-selected: "<yellow>Сначала выберите любимого маунта в /mount."
+  favorite-unavailable: "<red>Любимый маунт больше недоступен. Выберите другого в /mount."
+  favorite-saved: "<green>Любимый маунт выбран: <white><mount><green>."
+  whistle-given: "<green>Свисток маунта добавлен в инвентарь."
+  whistle-already-owned: "<yellow>Свисток уже лежит у вас в инвентаре."
+  whistle-disabled: "<yellow>Свисток маунта отключён на этом сервере."
+  inventory-full: "<red>Освободите место в инвентаре."
+  purchases-disabled: "<yellow>Покупки маунтов доступны у Гектора или Эммы во дворе маунтов на спавне."
+  purchase-success: "<green>Покупка сохранена!"
+  purchase-success-next-summon: "<yellow>Покупка сохранена; новый облик применится при следующем безопасном призыве."
+  setting-saved: "<green>Настройка сохранена."
+  setting-applied: "<green>Настройка сохранена и применена к активному маунту."
+  setting-next-summon: "<yellow>Настройка сохранена и применится при следующем призыве."
+  purchase-busy: "<yellow>Предыдущая операция ещё выполняется."
+  already-owned: "<yellow>Это уже выбрано или куплено."
+  invalid-level: "<red>Сначала купите предыдущий уровень."
+  not-unlocked: "<red>Сначала разблокируйте маунта или облик."
+  not-for-sale: "<red>Это улучшение нельзя купить."
+  economy-unavailable: "<red>Экономика временно недоступна."
+  not-enough-money: "<red>Недостаточно денег."
+  payment-failed: "<red>Платёж не прошёл. Деньги не списаны."
+  journal-unavailable: "<red>Покупки временно приостановлены. Деньги не списаны."
+  setting-failed: "<red>Не удалось сохранить настройку."
+  save-failed-refunded: "<red>Покупка не сохранилась. Деньги полностью возвращены."
+  purchase-manual-review: "<dark_red>Покупка приостановлена для безопасной проверки. Повторно не покупайте; обратитесь к администрации."
+  admin-grant-all-success: "<green>Все маунты и улучшения выданы игроку <white><player><green>. Маунтов: <white><count><green>."
+
+  merchant-required: <#ff9f0f>Покупки доступны у Гектора или Эммы на спавне.
+ability-upgrades:
+  water-breathing:
+    name: "Дыхание глубин"
+    description:
+      - "Позволяет дышать под водой"
+      - "всё время поездки."
+    item: HEART_OF_THE_SEA
+    price: 20000
+    currency: vault
+    effect: WATER_BREATHING
+  night-vision:
+    name: "Сумеречное зрение"
+    description:
+      - "Освещает ночные дороги,"
+      - "пещеры и океанские глубины."
+    item: GLOW_INK_SAC
+    price: 15000
+    currency: vault
+    effect: NIGHT_VISION
+  fire-resistance:
+    name: "Жаропрочная упряжь"
+    description:
+      - "Защищает всадника от огня и лавы"
+      - "всё время поездки."
+    item: MAGMA_CREAM
+    price: 50
+    currency: tokens
+    effect: FIRE_RESISTANCE
+  dolphins-grace:
+    name: "Грация дельфина"
+    description:
+      - "Даёт дельфиний эффект"
+      - "и ускоряет маунта в воде."
+    item: NAUTILUS_SHELL
+    price: 80
+    currency: tokens
+    effect: DOLPHINS_GRACE
+    speed-multiplier: 1.15
+
+cosmetics:
+  starlight:
+    name: "Звёздный комплект"
+    item: AMETHYST_SHARD
+    trail:
+      name: "Звёздный след"
+      particle: END_ROD
+      pattern: spiral
+      interval-ticks: 3
+      count: 3
+      back-offset: 0.28
+      height-ratio: 0.38
+      spread: 0.16
+      speed: 0.01
+  shadow:
+    name: "Теневой комплект"
+    item: ECHO_SHARD
+    trail:
+      name: "След душ"
+      particle: SOUL
+      pattern: double-helix
+      interval-ticks: 4
+      count: 4
+      back-offset: 0.24
+      height-ratio: 0.42
+      spread: 0.18
+      speed: 0.015
+  flame:
+    name: "Огненный комплект"
+    item: BLAZE_POWDER
+    trail:
+      name: "Огненный след"
+      particle: FLAME
+      pattern: pulse
+      interval-ticks: 3
+      count: 6
+  soulfire:
+    name: "Пламя душ"
+    item: SOUL_LANTERN
+    trail:
+      name: "Пламя душ"
+      particle: SOUL_FIRE_FLAME
+      pattern: orbit
+      interval-ticks: 3
+      count: 6
+  cloud:
+    name: "Облачный комплект"
+    item: WHITE_DYE
+    trail:
+      name: "Облачный след"
+      particle: CLOUD
+      pattern: ring
+      interval-ticks: 3
+      count: 8
+  ocean:
+    name: "Океанический комплект"
+    item: NAUTILUS_SHELL
+    trail:
+      name: "Океанический след"
+      particle: NAUTILUS
+      pattern: spiral
+      interval-ticks: 3
+      count: 6
+  electric:
+    name: "Электрическая спираль"
+    item: LIGHTNING_ROD
+    trail:
+      name: "Электрическая спираль"
+      particle: ELECTRIC_SPARK
+      pattern: spiral
+      interval-ticks: 2
+      count: 7
+      back-offset: 0.3
+      height-ratio: 0.48
+      spread: 0.05
+      speed: 0.02
+  portal:
+    name: "Портальные кольца"
+    item: ENDER_PEARL
+    trail:
+      name: "Портальные кольца"
+      particle: REVERSE_PORTAL
+      pattern: ring
+      interval-ticks: 3
+      count: 8
+      back-offset: 0.32
+      height-ratio: 0.5
+      spread: 0.04
+      speed: 0.01
+  witchcraft:
+    name: "Ведьмина двойная лента"
+    item: POTION
+    trail:
+      name: "Ведьмина двойная лента"
+      particle: WITCH
+      pattern: double-helix
+      interval-ticks: 2
+      count: 8
+      back-offset: 0.28
+      height-ratio: 0.5
+      spread: 0.04
+      speed: 0.01
+  enchanted:
+    name: "Руническая орбита"
+    item: ENCHANTED_BOOK
+    trail:
+      name: "Руническая орбита"
+      particle: ENCHANT
+      pattern: orbit
+      interval-ticks: 3
+      count: 7
+      back-offset: 0.28
+      height-ratio: 0.5
+      spread: 0.03
+      speed: 0.01
+  glow:
+    name: "Световой пульс"
+    item: GLOW_INK_SAC
+    trail:
+      name: "Световой пульс"
+      particle: GLOW
+      pattern: pulse
+      interval-ticks: 3
+      count: 8
+      back-offset: 0.3
+      height-ratio: 0.48
+      spread: 0.04
+      speed: 0.01
+
+  frost:
+    name: Ледяная волна
+    item: SNOWBALL
+    trail:
+      name: Ледяная волна
+      particle: SNOWFLAKE
+      pattern: wave
+      interval-ticks: 3
+      count: 6
+      back-offset: 0.35
+      height-ratio: 0.5
+      spread: 0.015
+      speed: 0.0
+  cherry:
+    name: Ленты сакуры
+    item: CHERRY_SAPLING
+    trail:
+      name: Ленты сакуры
+      particle: CHERRY_LEAVES
+      pattern: ribbon
+      interval-ticks: 4
+      count: 8
+      back-offset: 0.35
+      height-ratio: 0.5
+      spread: 0.015
+      speed: 0.0
+  comet:
+    name: Звёздная комета
+    item: FIREWORK_ROCKET
+    trail:
+      name: Звёздная комета
+      particle: FIREWORK
+      pattern: comet
+      interval-ticks: 3
+      count: 8
+      back-offset: 0.35
+      height-ratio: 0.5
+      spread: 0.015
+      speed: 0.0
+  heart:
+    name: Сердечный пульс
+    item: POPPY
+    trail:
+      name: Сердечный пульс
+      particle: HEART
+      pattern: heart
+      interval-ticks: 4
+      count: 8
+      back-offset: 0.35
+      height-ratio: 0.5
+      spread: 0.015
+      speed: 0.0
+shared-skins:
+  electric-spiral:
+    name: "Электрическая спираль"
+    preset: electric
+    price: 50
+    currency: tokens
+  portal-rings:
+    name: "Портальные кольца"
+    preset: portal
+    price: 65
+    currency: tokens
+  witch-helix:
+    name: "Ведьмина двойная лента"
+    preset: witchcraft
+    price: 80
+    currency: tokens
+  enchanted-orbit:
+    name: "Руническая орбита"
+    preset: enchanted
+    price: 100
+    currency: tokens
+  glow-pulse:
+    name: "Световой пульс"
+    preset: glow
+    price: 120
+    currency: tokens
+
+  frost-wave:
+    name: Ледяная волна
+    preset: frost
+    price: 35
+    currency: tokens
+  cherry-ribbons:
+    name: Ленты сакуры
+    preset: cherry
+    price: 50
+    currency: tokens
+  star-comet:
+    name: Звёздная комета
+    preset: comet
+    price: 80
+    currency: tokens
+  heart-beat:
+    name: Сердечный пульс
+    preset: heart
+    price: 60
+    currency: tokens
+mounts:
+  zombie:
+    type: walking
+    item: ZOMBIE_SPAWN_EGG
+    entity: ZOMBIE
+    name: "Зомби"
+    rarity: common
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Надёжный городской ходок"
+      - "с полностью фиксируемой внешностью."
+    abilities:
+      passive:
+        undead-tenacity:
+          name: "Мёртвая стойкость"
+          effect: RESISTANCE
+          amplifier: 0
+          description:
+            - "Даёт Сопротивление I во время поездки."
+    levels:
+      - {speed: 1.35, handling: 0.9, sprint: 1, price: 30}
+      - {speed: 2.25, handling: 1, sprint: 1.03, price: 45}
+      - {speed: 4.8, handling: 1.28, sprint: 1.12, price: 75}
+    buy-glow: 5000
+    buy-glow-currency: vault
+    appearance:
+      baby: false
+      scale: 1
+    skins:
+      baby:
+        name: "Малыш-зомби"
+        item: ZOMBIE_HEAD
+        preset: starlight
+        price: 15
+        currency: tokens
+        appearance:
+          baby: true
+          scale: 1
+      iron_guard:
+        name: "Железный страж"
+        item: IRON_CHESTPLATE
+        preset: shadow
+        price: 15
+        currency: tokens
+        appearance:
+          baby: false
+          scale: 1
+          equipment:
+            head: IRON_HELMET
+            chest: IRON_CHESTPLATE
+            legs: IRON_LEGGINGS
+            feet: IRON_BOOTS
+            main-hand: IRON_SWORD
+      diamond_warlord:
+        name: "Алмазный воевода"
+        item: DIAMOND_CHESTPLATE
+        preset: soulfire
+        price: 15
+        currency: tokens
+        appearance:
+          baby: false
+          scale: 1.08
+          equipment:
+            head: DIAMOND_HELMET
+            chest: DIAMOND_CHESTPLATE
+            legs: DIAMOND_LEGGINGS
+            feet: DIAMOND_BOOTS
+            main-hand: NETHERITE_SWORD
+  skeleton:
+    type: walking
+    item: SKELETON_SPAWN_EGG
+    entity: SKELETON
+    name: "Скелет"
+    rarity: common
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Сухой, лёгкий и отзывчивый всадник"
+      - "для первых дальних поездок."
+    abilities:
+      upgrades: [night-vision]
+    levels:
+      - {speed: 1.35, handling: 0.9, sprint: 1, price: 30}
+      - {speed: 2.25, handling: 1, sprint: 1.03, price: 45}
+      - {speed: 4.8, handling: 1.28, sprint: 1.12, price: 75}
+    buy-glow: 5000
+    buy-glow-currency: vault
+    appearance:
+      scale: 1
+    skins:
+      starlight:
+        name: "Звёздный комплект"
+        item: AMETHYST_SHARD
+        preset: starlight
+        price: 15
+        currency: tokens
+      shadow:
+        name: "Теневой комплект"
+        item: ECHO_SHARD
+        preset: shadow
+        price: 15
+        currency: tokens
+  pig:
+    type: walking
+    item: PIG_SPAWN_EGG
+    entity: PIG
+    name: "Скорен"
+    rarity: common
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: vault
+    description:
+      - "Тот самый Скорен."
+      - "От брелока ×0.1 до дома ×10."
+    abilities:
+      passive:
+        pig-acceleration:
+          name: "Свинячий разгон"
+          effect: SPEED
+          amplifier: 1
+          description:
+            - "После спешивания оставляет Скорость II."
+    motion:
+      acceleration-time: 0ms
+      deceleration-time: 0ms
+      turn-time: 0ms
+    levels:
+      - {speed: 1.65, handling: 0.9, sprint: 1, price: 25000}
+      - {speed: 2.7, handling: 1, sprint: 1.03, price: 60000}
+      - {speed: 5.6, handling: 1.28, sprint: 1.12, price: 120000}
+    buy-glow: 5000
+    buy-glow-currency: vault
+    appearance:
+      baby: false
+      scale: 1
+      equipment:
+        saddle: SADDLE
+    size-tuning:
+      - {id: keychain, name: "Брелок ×0.1", multiplier: 0.10, minimum-level: 1}
+      - {id: compact, name: "Компактный ×0.5", multiplier: 0.50, minimum-level: 1}
+      - {id: standard, name: "Обычный ×1", multiplier: 1.00, minimum-level: 1}
+      - {id: giant, name: "Гигант ×3", multiplier: 3.00, minimum-level: 2}
+      - {id: colossal, name: "Дом ×10", multiplier: 10.00, minimum-level: 3}
+    skins:
+      starlight:
+        name: "Звёздный комплект"
+        item: AMETHYST_SHARD
+        preset: starlight
+        price: 25
+        currency: tokens
+      shadow:
+        name: "Теневой комплект"
+        item: ECHO_SHARD
+        preset: shadow
+        price: 25
+        currency: tokens
+  enderman:
+    type: walking
+    item: ENDERMAN_SPAWN_EGG
+    entity: ENDERMAN
+    name: "Эндермен"
+    rarity: rare
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Высокий странник Бездны"
+      - "с резким разгоном и теневыми обликами."
+    abilities:
+      upgrades: [night-vision]
+    levels:
+      - {speed: 1.55, handling: 0.9, sprint: 1, price: 120}
+      - {speed: 2.5, handling: 1, sprint: 1.03, price: 180}
+      - {speed: 5.2, handling: 1.28, sprint: 1.12, price: 300}
+    buy-glow: 15000
+    buy-glow-currency: vault
+    appearance:
+      scale: 0.92
+    skins:
+      starlight:
+        name: "Звёздный комплект"
+        item: AMETHYST_SHARD
+        preset: starlight
+        price: 40
+        currency: tokens
+      shadow:
+        name: "Теневой комплект"
+        item: ECHO_SHARD
+        preset: shadow
+        price: 40
+        currency: tokens
+  horse:
+    type: walking
+    item: HORSE_SPAWN_EGG
+    entity: HORSE
+    name: "Лошадь"
+    rarity: uncommon
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: vault
+    description:
+      - "Классика путешествий:"
+      - "сильный галоп, уверенный прыжок"
+      - "и три варианта размера."
+    abilities:
+      high-jump:
+        name: "Уверенный прыжок"
+        multiplier: 1.25
+    levels:
+      - {speed: 1.45, handling: 0.9, sprint: 1, price: 50000}
+      - {speed: 2.35, handling: 1, sprint: 1.03, price: 120000}
+      - {speed: 5, handling: 1.28, sprint: 1.12, price: 250000}
+    buy-glow: 10000
+    buy-glow-currency: vault
+    appearance:
+      baby: false
+      scale: 1
+      variant: BROWN
+      secondary-variant: NONE
+      equipment:
+        saddle: SADDLE
+    size-tuning:
+      - {id: keychain, name: "Брелок ×0.1", multiplier: 0.10, minimum-level: 1}
+      - {id: standard, name: "Обычный ×1", multiplier: 1.00, minimum-level: 1}
+      - {id: huge, name: "Огромный ×2", multiplier: 2.00, minimum-level: 2}
+      - {id: absurd, name: "Абсурдный ×3", multiplier: 3.00, minimum-level: 3}
+    skins:
+      royal_white:
+        name: "Королевская белая"
+        item: DIAMOND_HORSE_ARMOR
+        preset: starlight
+        price: 40
+        currency: tokens
+        appearance:
+          variant: WHITE
+          secondary-variant: WHITE_DOTS
+          equipment:
+            saddle: SADDLE
+            body: DIAMOND_HORSE_ARMOR
+      night_runner:
+        name: "Ночной скакун"
+        item: IRON_HORSE_ARMOR
+        preset: shadow
+        price: 40
+        currency: tokens
+        appearance:
+          variant: BLACK
+          secondary-variant: BLACK_DOTS
+          equipment:
+            saddle: SADDLE
+            body: IRON_HORSE_ARMOR
+  camel:
+    type: walking
+    item: CAMEL_SPAWN_EGG
+    entity: CAMEL
+    passenger-seats: 1
+    name: "Верблюд"
+    rarity: uncommon
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: vault
+    description:
+      - "Спокойный караванщик"
+      - "с плавным разгоном"
+      - "для долгих дорог и дорогих сбруй."
+    abilities:
+      passive:
+        desert-endurance:
+          name: "Жар пустыни"
+          effect: FIRE_RESISTANCE
+          amplifier: 0
+          description:
+            - "Защищает всадника от огня и лавы."
+    motion:
+      acceleration-time: 0ms
+      deceleration-time: 0ms
+      turn-time: 0ms
+    levels:
+      - {speed: 1.45, handling: 0.9, sprint: 1, price: 150000}
+      - {speed: 2.35, handling: 1, sprint: 1.03, price: 300000}
+      - {speed: 5, handling: 1.28, sprint: 1.12, price: 600000}
+    buy-glow: 25000
+    buy-glow-currency: vault
+    appearance:
+      baby: false
+      scale: 1
+      equipment:
+        saddle: SADDLE
+    skins:
+      starlight:
+        name: "Звёздный комплект"
+        item: AMETHYST_SHARD
+        preset: starlight
+        price: 40
+        currency: tokens
+      shadow:
+        name: "Теневой комплект"
+        item: ECHO_SHARD
+        preset: shadow
+        price: 40
+        currency: tokens
+  goat:
+    type: walking
+    item: GOAT_SPAWN_EGG
+    entity: GOAT
+    name: "Горный козёл"
+    rarity: uncommon
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Упрямый покоритель склонов"
+      - "с особенно высоким прыжком."
+    abilities:
+      high-jump:
+        name: "Высокий прыжок"
+        multiplier: 1.8
+    levels:
+      - {speed: 1.45, handling: 0.9, sprint: 1, price: 60}
+      - {speed: 2.35, handling: 1, sprint: 1.03, price: 90}
+      - {speed: 5, handling: 1.28, sprint: 1.12, price: 150}
+    buy-glow: 10000
+    buy-glow-currency: vault
+    appearance:
+      baby: false
+      scale: 1.15
+    skins:
+      starlight:
+        name: "Звёздный комплект"
+        item: AMETHYST_SHARD
+        preset: starlight
+        price: 25
+        currency: tokens
+      shadow:
+        name: "Теневой комплект"
+        item: ECHO_SHARD
+        preset: shadow
+        price: 25
+        currency: tokens
+  fox:
+    type: walking
+    item: FOX_SPAWN_EGG
+    entity: FOX
+    name: "Лисица"
+    rarity: uncommon
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Юркая рыжая спутница"
+      - "для узких улиц"
+      - "и прыжков через препятствия."
+    abilities:
+      high-jump:
+        name: "Лисий прыжок"
+        multiplier: 1.35
+    motion:
+      acceleration-time: 0ms
+      deceleration-time: 0ms
+      turn-time: 0ms
+    levels:
+      - {speed: 1.45, handling: 0.9, sprint: 1, price: 60}
+      - {speed: 2.35, handling: 1, sprint: 1.03, price: 90}
+      - {speed: 5, handling: 1.28, sprint: 1.12, price: 150}
+    buy-glow: 10000
+    buy-glow-currency: vault
+    appearance:
+      baby: false
+      scale: 1.35
+      variant: RED
+    skins:
+      snow_fox:
+        name: "Снежная лисица"
+        item: SNOWBALL
+        preset: starlight
+        price: 25
+        currency: tokens
+        appearance:
+          variant: SNOW
+      shadow_fox:
+        name: "Сумеречная лисица"
+        item: ECHO_SHARD
+        preset: shadow
+        price: 25
+        currency: tokens
+  frog:
+    type: walking
+    item: FROG_SPAWN_EGG
+    entity: FROG
+    name: "Лягушка"
+    rarity: uncommon
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Пружинистый ходок"
+      - "с высоким прыжком"
+      - "и отличным финальным разгоном."
+    abilities:
+      high-jump:
+        name: "Пружинный прыжок"
+        multiplier: 1.55
+    levels:
+      - {speed: 1.45, handling: 0.9, sprint: 1, price: 60}
+      - {speed: 2.35, handling: 1, sprint: 1.03, price: 90}
+      - {speed: 5, handling: 1.28, sprint: 1.12, price: 150}
+    buy-glow: 10000
+    buy-glow-currency: vault
+    appearance:
+      baby: false
+      scale: 1.7
+      variant: TEMPERATE
+    skins:
+      cold:
+        name: "Морозная лягушка"
+        item: PACKED_ICE
+        preset: starlight
+        price: 25
+        currency: tokens
+        appearance:
+          variant: COLD
+      warm:
+        name: "Тропическая лягушка"
+        item: MAGMA_CREAM
+        preset: flame
+        price: 25
+        currency: tokens
+        appearance:
+          variant: WARM
+  ravager:
+    type: walking
+    item: RAVAGER_SPAWN_EGG
+    entity: RAVAGER
+    passenger-seats: 2
+    name: "Разоритель"
+    rarity: epic
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Тяжёлый престижный таран:"
+      - "дорогой, грозный"
+      - "и удивительно быстрый."
+    motion:
+      acceleration-time: 0ms
+      deceleration-time: 0ms
+      turn-time: 0ms
+    levels:
+      - {speed: 1.65, handling: 0.9, sprint: 1, price: 240}
+      - {speed: 2.65, handling: 1, sprint: 1.03, price: 360}
+      - {speed: 5.4, handling: 1.28, sprint: 1.12, price: 600}
+    buy-glow: 20000
+    buy-glow-currency: vault
+    appearance:
+      scale: 0.82
+    size-tuning:
+      - {id: keychain, name: "Брелок ×0.1", multiplier: 0.10, minimum-level: 1}
+      - {id: standard, name: "Обычный ×1", multiplier: 1.00, minimum-level: 1}
+      - {id: huge, name: "Огромный ×2", multiplier: 2.00, minimum-level: 2}
+      - {id: absurd, name: "Абсурдный ×3", multiplier: 3.00, minimum-level: 3}
+    behaviors:
+      ravager-ram:
+        type: ram
+        name: "Таран"
+        description:
+          - "Нажмите спринт при движении вперёд."
+          - "Первый враждебный моб на пути"
+          - "получит урон при столкновении."
+        trigger: sprint-forward-press
+        cooldown: 4s
+        request-window: 1200ms
+        active-window-ticks: 8
+        minimum-speed-fraction: 0.65
+        reach: 1.25
+        lateral-padding: 0.35
+        damage: 4.0
+      ravager-trample:
+        type: trample
+        name: "Топот"
+        description:
+          - "Враждебные мобы под корпусом"
+          - "получают урон во время движения."
+        cooldown: 1s
+        minimum-speed-fraction: 0.2
+        horizontal-padding: 0.25
+        downward-reach: 0.75
+        damage: 2.0
+        maximum-targets: 4
+    skins:
+      starlight:
+        name: "Звёздный комплект"
+        item: AMETHYST_SHARD
+        preset: starlight
+        price: 70
+        currency: tokens
+      shadow:
+        name: "Теневой комплект"
+        item: ECHO_SHARD
+        preset: shadow
+        price: 70
+        currency: tokens
+  sniffer:
+    type: walking
+    item: SNIFFER_SPAWN_EGG
+    entity: SNIFFER
+    name: "Нюхач"
+    rarity: rare
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Древний добряк для коллекционеров:"
+      - "размеренный старт"
+      - "и мощный финиш."
+    abilities:
+      passive:
+        ancient-instinct:
+          name: "Древнее чутьё"
+          effect: HASTE
+          amplifier: 0
+          description:
+            - "Ускоряет добычу блоков во время экспедиции."
+    levels:
+      - {speed: 1.55, handling: 0.9, sprint: 1, price: 120}
+      - {speed: 2.5, handling: 1, sprint: 1.03, price: 180}
+      - {speed: 5.2, handling: 1.28, sprint: 1.12, price: 300}
+    buy-glow: 15000
+    buy-glow-currency: vault
+    appearance:
+      baby: false
+      scale: 0.85
+    skins:
+      starlight:
+        name: "Звёздный комплект"
+        item: AMETHYST_SHARD
+        preset: starlight
+        price: 40
+        currency: tokens
+      shadow:
+        name: "Теневой комплект"
+        item: ECHO_SHARD
+        preset: shadow
+        price: 40
+        currency: tokens
+  strider:
+    type: walking
+    item: STRIDER_SPAWN_EGG
+    entity: STRIDER
+    name: "Лавомерка"
+    rarity: rare
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Редкий спутник Нижнего мира"
+      - "с жаркими следами"
+      - "и уверенным форсажем."
+    abilities:
+      upgrades: [fire-resistance]
+    levels:
+      - {speed: 1.55, handling: 0.9, sprint: 1, price: 120}
+      - {speed: 2.5, handling: 1, sprint: 1.03, price: 180}
+      - {speed: 5.2, handling: 1.28, sprint: 1.12, price: 300}
+    buy-glow: 15000
+    buy-glow-currency: vault
+    appearance:
+      baby: false
+      scale: 1.1
+      equipment:
+        saddle: SADDLE
+    skins:
+      flame:
+        name: "Огненный комплект"
+        item: BLAZE_POWDER
+        preset: flame
+        price: 40
+        currency: tokens
+      shadow:
+        name: "Теневой комплект"
+        item: ECHO_SHARD
+        preset: shadow
+        price: 40
+        currency: tokens
+  bee:
+    type: flying
+    control: vehicle
+    item: BEE_SPAWN_EGG
+    entity: BEE
+    name: "Пчела"
+    rarity: common
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Дружелюбный первый воздушный маунт"
+      - "от брелока до живого дирижабля."
+    abilities:
+      passive:
+        honey-reserve:
+          name: "Медовый запас"
+          effect: REGENERATION
+          amplifier: 0
+          description:
+            - "Постепенно восстанавливает здоровье всадника."
+    levels:
+      - {speed: 0.42, handling: 0.9, sprint: 1, price: 120}
+      - {speed: 0.72, handling: 1, sprint: 1.03, price: 180}
+      - {speed: 1.35, handling: 1.28, sprint: 1.12, price: 300}
+    buy-glow: 5000
+    buy-glow-currency: vault
+    appearance:
+      baby: false
+      scale: 1
+    size-tuning:
+      - {id: keychain, name: "Брелок ×0.1", multiplier: 0.10, minimum-level: 1}
+      - {id: compact, name: "Компактная ×0.5", multiplier: 0.50, minimum-level: 1}
+      - {id: standard, name: "Обычный ×1", multiplier: 1.00, minimum-level: 1}
+      - {id: giant, name: "Гигантская ×3", multiplier: 3.00, minimum-level: 2}
+      - {id: colossal, name: "Дирижабль ×10", multiplier: 10.00, minimum-level: 3}
+    skins:
+      starlight:
+        name: "Звёздный комплект"
+        item: AMETHYST_SHARD
+        preset: starlight
+        price: 15
+        currency: tokens
+      cloud:
+        name: "Облачный комплект"
+        item: WHITE_DYE
+        preset: cloud
+        price: 15
+        currency: tokens
+  turtle:
+    type: flying
+    control: vehicle
+    item: TURTLE_SPAWN_EGG
+    entity: TURTLE
+    name: "Летающая черепаха"
+    rarity: uncommon
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Невозможная черепаха,"
+      - "которая всё-таки летает."
+    abilities:
+      passive:
+        shell-guard:
+          name: "Панцирная защита"
+          effect: RESISTANCE
+          amplifier: 0
+          description:
+            - "Даёт Сопротивление I во время поездки."
+    levels:
+      - {speed: 0.45, handling: 0.9, sprint: 1, price: 120}
+      - {speed: 0.76, handling: 1, sprint: 1.03, price: 180}
+      - {speed: 1.45, handling: 1.28, sprint: 1.12, price: 300}
+    buy-glow: 10000
+    buy-glow-currency: vault
+    appearance:
+      baby: false
+      scale: 1.15
+    skins:
+      starlight:
+        name: "Звёздный комплект"
+        item: AMETHYST_SHARD
+        preset: starlight
+        price: 25
+        currency: tokens
+      cloud:
+        name: "Облачный комплект"
+        item: WHITE_DYE
+        preset: cloud
+        price: 25
+        currency: tokens
+  frog2:
+    type: flying
+    control: vehicle
+    item: FROG_SPAWN_EGG
+    entity: FROG
+    name: "Летающая лягушка"
+    rarity: rare
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Манёвренный воздушный собрат"
+      - "обычной лягушки."
+    abilities:
+      passive:
+        lucky-midge:
+          name: "Попутный комар"
+          effect: LUCK
+          amplifier: 0
+          description:
+            - "Даёт Удачу I во время поездки."
+    levels:
+      - {speed: 0.48, handling: 0.9, sprint: 1, price: 120}
+      - {speed: 0.8, handling: 1, sprint: 1.03, price: 180}
+      - {speed: 1.52, handling: 1.28, sprint: 1.12, price: 300}
+    buy-glow: 15000
+    buy-glow-currency: vault
+    appearance:
+      baby: false
+      scale: 1.7
+      variant: TEMPERATE
+    skins:
+      cold_sky:
+        name: "Полярный прыгун"
+        item: BLUE_ICE
+        preset: starlight
+        price: 40
+        currency: tokens
+        appearance:
+          variant: COLD
+      fire_sky:
+        name: "Огненный прыгун"
+        item: BLAZE_POWDER
+        preset: flame
+        price: 40
+        currency: tokens
+        appearance:
+          variant: WARM
+  blaze:
+    type: flying
+    control: vehicle
+    item: BLAZE_SPAWN_EGG
+    entity: BLAZE
+    name: "Блэйз"
+    rarity: legendary
+    acquisition: "Сезонная или событийная награда"
+    currency: tokens
+    description:
+      - "Наследный сезонный маунт"
+      - "старой коллекции."
+    abilities:
+      upgrades: [fire-resistance]
+    levels:
+      - {speed: 0.55, handling: 0.9, sprint: 1, price: null}
+      - {speed: 0.9, handling: 1, sprint: 1.03, price: 720}
+      - {speed: 1.7, handling: 1.28, sprint: 1.12, price: 1200}
+    buy-glow: 25000
+    buy-glow-currency: vault
+    appearance:
+      scale: 0.9
+    skins:
+      flame:
+        name: "Огненный комплект"
+        item: BLAZE_POWDER
+        preset: flame
+        price: 120
+        currency: tokens
+      shadow:
+        name: "Теневой комплект"
+        item: ECHO_SHARD
+        preset: shadow
+        price: 120
+        currency: tokens
+  allay:
+    type: flying
+    control: vehicle
+    item: ALLAY_SPAWN_EGG
+    entity: ALLAY
+    name: "Эллэй"
+    rarity: uncommon
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Лёгкий музыкальный проводник"
+      - "с мягкими поворотами в воздухе."
+    abilities:
+      passive:
+        helper-tempo:
+          name: "Рабочий темп"
+          effect: HASTE
+          amplifier: 0
+          description:
+            - "Даёт Спешку I во время поездки."
+    levels:
+      - {speed: 0.45, handling: 0.9, sprint: 1, price: 120}
+      - {speed: 0.76, handling: 1, sprint: 1.03, price: 180}
+      - {speed: 1.45, handling: 1.28, sprint: 1.12, price: 300}
+    buy-glow: 10000
+    buy-glow-currency: vault
+    appearance:
+      scale: 2
+    skins:
+      starlight:
+        name: "Звёздный комплект"
+        item: AMETHYST_SHARD
+        preset: starlight
+        price: 25
+        currency: tokens
+      cloud:
+        name: "Облачный комплект"
+        item: WHITE_DYE
+        preset: cloud
+        price: 25
+        currency: tokens
+  parrot:
+    type: flying
+    control: vehicle
+    item: PARROT_SPAWN_EGG
+    entity: PARROT
+    name: "Попугай"
+    rarity: uncommon
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Яркий воздушный разведчик"
+      - "с набором фиксированных расцветок."
+    abilities:
+      passive:
+        feathered-landing:
+          name: "Перьевой планер"
+          effect: SLOW_FALLING
+          amplifier: 0
+          description:
+            - "Смягчает падение после воздушной поездки."
+    levels:
+      - {speed: 0.45, handling: 0.9, sprint: 1, price: 120}
+      - {speed: 0.76, handling: 1, sprint: 1.03, price: 180}
+      - {speed: 1.45, handling: 1.28, sprint: 1.12, price: 300}
+    buy-glow: 10000
+    buy-glow-currency: vault
+    appearance:
+      baby: false
+      scale: 1
+      variant: RED
+    size-tuning:
+      - {id: keychain, name: "Крошечный ×0.1", multiplier: 0.10, minimum-level: 1}
+      - {id: compact, name: "Компактный ×0.5", multiplier: 0.50, minimum-level: 1}
+      - {id: standard, name: "Обычный ×1", multiplier: 1.00, minimum-level: 1}
+      - {id: giant, name: "Гигантский ×3", multiplier: 3.00, minimum-level: 2}
+      - {id: colossal, name: "Авиалайнер ×10", multiplier: 10.00, minimum-level: 3}
+    skins:
+      blue:
+        name: "Синий ара"
+        item: LAPIS_LAZULI
+        preset: starlight
+        price: 25
+        currency: tokens
+        appearance:
+          variant: BLUE
+      green:
+        name: "Изумрудный ара"
+        item: EMERALD
+        preset: shadow
+        price: 25
+        currency: tokens
+        appearance:
+          variant: GREEN
+  bat:
+    type: flying
+    control: vehicle
+    item: BAT_SPAWN_EGG
+    entity: BAT
+    name: "Летучая мышь"
+    rarity: uncommon
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Компактный ночной пилот"
+      - "для пещер, башен"
+      - "и тесных пролётов."
+    abilities:
+      upgrades: [night-vision]
+    levels:
+      - {speed: 0.45, handling: 0.9, sprint: 1, price: 120}
+      - {speed: 0.76, handling: 1, sprint: 1.03, price: 180}
+      - {speed: 1.45, handling: 1.28, sprint: 1.12, price: 300}
+    buy-glow: 10000
+    buy-glow-currency: vault
+    appearance:
+      scale: 2.1
+    skins:
+      starlight:
+        name: "Звёздный комплект"
+        item: AMETHYST_SHARD
+        preset: starlight
+        price: 25
+        currency: tokens
+      cloud:
+        name: "Облачный комплект"
+        item: WHITE_DYE
+        preset: cloud
+        price: 25
+        currency: tokens
+  vex:
+    type: flying
+    control: vehicle
+    item: VEX_SPAWN_EGG
+    entity: VEX
+    name: "Вредина"
+    rarity: epic
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Эфирный боевой силуэт"
+      - "для тех, кому мало просто летать."
+    abilities:
+      passive:
+        vexing-fury:
+          name: "Злобный запал"
+          effect: STRENGTH
+          amplifier: 0
+          description:
+            - "Даёт Силу I во время поездки."
+    levels:
+      - {speed: 0.52, handling: 0.9, sprint: 1, scale: 1, price: 240}
+      - {speed: 0.85, handling: 1, sprint: 1.03, scale: 1, price: 360}
+      - {speed: 1.6, handling: 1.28, sprint: 1.12, scale: 1, price: 600}
+    buy-glow: 20000
+    buy-glow-currency: vault
+    appearance:
+      scale: 1.85
+    skins:
+      starlight:
+        name: "Звёздный комплект"
+        item: AMETHYST_SHARD
+        preset: starlight
+        price: 70
+        currency: tokens
+      shadow:
+        name: "Теневой комплект"
+        item: ECHO_SHARD
+        preset: shadow
+        price: 70
+        currency: tokens
+  breeze:
+    type: flying
+    control: vehicle
+    item: BREEZE_SPAWN_EGG
+    entity: BREEZE
+    name: "Вихрь"
+    rarity: epic
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Живой порыв ветра"
+      - "с мгновенной реакцией"
+      - "и облачными украшениями."
+    abilities:
+      passive:
+        wind-cushion:
+          name: "Воздушная подушка"
+          effect: SLOW_FALLING
+          amplifier: 0
+          description:
+            - "Смягчает падение после полёта."
+    motion:
+      acceleration-time: 0ms
+      deceleration-time: 0ms
+      turn-time: 0ms
+    levels:
+      - {speed: 0.52, handling: 0.9, sprint: 1, price: 240}
+      - {speed: 0.85, handling: 1, sprint: 1.03, price: 360}
+      - {speed: 1.6, handling: 1.28, sprint: 1.12, price: 600}
+    buy-glow: 20000
+    buy-glow-currency: vault
+    appearance:
+      scale: 0.9
+    skins:
+      starlight:
+        name: "Звёздный комплект"
+        item: AMETHYST_SHARD
+        preset: starlight
+        price: 70
+        currency: tokens
+      shadow:
+        name: "Теневой комплект"
+        item: ECHO_SHARD
+        preset: shadow
+        price: 70
+        currency: tokens
+  phantom:
+    type: flying
+    control: vehicle
+    item: PHANTOM_SPAWN_EGG
+    entity: PHANTOM
+    name: "Фантом"
+    rarity: epic
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Ночной хищник"
+      - "с широким силуэтом"
+      - "и дорогим звёздным следом."
+    abilities:
+      upgrades: [night-vision]
+    levels:
+      - {speed: 0.52, handling: 0.9, sprint: 1, price: 240}
+      - {speed: 0.85, handling: 1, sprint: 1.03, price: 360}
+      - {speed: 1.6, handling: 1.28, sprint: 1.12, price: 600}
+    buy-glow: 20000
+    buy-glow-currency: vault
+    appearance:
+      scale: 0.85
+    skins:
+      starlight:
+        name: "Звёздный комплект"
+        item: AMETHYST_SHARD
+        preset: starlight
+        price: 70
+        currency: tokens
+      shadow:
+        name: "Теневой комплект"
+        item: ECHO_SHARD
+        preset: shadow
+        price: 70
+        currency: tokens
+  ghast:
+    type: flying
+    control: vehicle
+    item: GHAST_SPAWN_EGG
+    entity: GHAST
+    name: "Гаст"
+    rarity: legendary
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Корабль Нижнего мира:"
+      - "от брелока до небесной крепости."
+    abilities:
+      upgrades: [fire-resistance]
+      passive:
+        nether-bubble:
+          name: "Пузырь Нижнего мира"
+          effect: FIRE_RESISTANCE
+          amplifier: 0
+          description:
+            - "Постоянно защищает всадника от огня и лавы."
+    levels:
+      - {speed: 0.55, handling: 0.9, sprint: 1, price: 480}
+      - {speed: 0.9, handling: 1, sprint: 1.03, price: 720}
+      - {speed: 1.7, handling: 1.28, sprint: 1.12, price: 1200}
+    buy-glow: 25000
+    buy-glow-currency: vault
+    appearance:
+      scale: 1
+    size-tuning:
+      - {id: keychain, name: "Карманный ×0.1", multiplier: 0.10, minimum-level: 1}
+      - {id: compact, name: "Компактный ×0.5", multiplier: 0.50, minimum-level: 1}
+      - {id: standard, name: "Обычный ×1", multiplier: 1.00, minimum-level: 1}
+      - {id: giant, name: "Крепость ×3", multiplier: 3.00, minimum-level: 2}
+      - {id: colossal, name: "Небоход ×10", multiplier: 10.00, minimum-level: 3}
+    skins:
+      starlight:
+        name: "Звёздный комплект"
+        item: AMETHYST_SHARD
+        preset: starlight
+        price: 120
+        currency: tokens
+      soulfire:
+        name: "Пламя душ"
+        item: SOUL_LANTERN
+        preset: soulfire
+        price: 120
+        currency: tokens
+  happy_ghast:
+    type: flying
+    item: HAPPY_GHAST_SPAWN_EGG
+    entity: HAPPY_GHAST
+    passenger-seats: 2
+    name: "Счастливый гаст"
+    rarity: legendary
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Дружелюбный флагман"
+      - "воздушной коллекции."
+    abilities:
+      upgrades: [fire-resistance]
+    levels:
+      - {speed: 0.55, handling: 0.9, sprint: 1, price: 480}
+      - {speed: 0.9, handling: 1, sprint: 1.03, price: 720}
+      - {speed: 1.7, handling: 1.28, sprint: 1.12, price: 1200}
+    buy-glow: 25000
+    buy-glow-currency: vault
+    appearance:
+      scale: 0.66
+      equipment:
+        body: WHITE_HARNESS
+    skins:
+      starlight:
+        name: "Звёздный комплект"
+        item: AMETHYST_SHARD
+        preset: starlight
+        price: 120
+        currency: tokens
+      soulfire:
+        name: "Пламя душ"
+        item: SOUL_LANTERN
+        preset: soulfire
+        price: 120
+        currency: tokens
+  skycruiser:
+    type: flying
+    control: player-flight
+    entity: PHANTOM
+    item: PHANTOM_MEMBRANE
+    name: "Небесный крейсер"
+    rarity: legendary
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Крылатый спутник с управлением как /fly."
+      - "Одиночный полёт без догоняющего корпуса."
+    abilities:
+      upgrades: [night-vision, fire-resistance]
+    levels:
+      - {speed: 1.1, handling: 1, sprint: 1, price: 1200}
+      - {speed: 1.5, handling: 1, sprint: 1, price: 1800}
+      - {speed: 1.9, handling: 1, sprint: 1, price: 3000}
+    buy-glow: 25000
+    buy-glow-currency: vault
+    appearance:
+      scale: 0.9
+    skins:
+      starlight:
+        name: "Звёздный комплект"
+        item: AMETHYST_SHARD
+        preset: starlight
+        price: 150
+        currency: tokens
+      soulfire:
+        name: "Пламя душ"
+        item: SOUL_LANTERN
+        preset: soulfire
+        price: 150
+        currency: tokens
+  dolphin:
+    type: swimming
+    item: DOLPHIN_SPAWN_EGG
+    entity: DOLPHIN
+    name: "Дельфин"
+    rarity: common
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Быстрый и естественный водный маунт."
+    abilities:
+      upgrades: [water-breathing, night-vision, dolphins-grace]
+    levels:
+      - {speed: 0.52, handling: 0.9, sprint: 1, price: 30}
+      - {speed: 0.88, handling: 1, sprint: 1.03, price: 45}
+      - {speed: 1.65, handling: 1.28, sprint: 1.12, price: 75}
+    buy-glow: 5000
+    buy-glow-currency: vault
+    appearance:
+      scale: 1.05
+    skins:
+      ocean:
+        name: "Океанический комплект"
+        item: NAUTILUS_SHELL
+        preset: ocean
+        price: 15
+        currency: tokens
+      starlight:
+        name: "Звёздный комплект"
+        item: AMETHYST_SHARD
+        preset: starlight
+        price: 15
+        currency: tokens
+  axolotl:
+    type: swimming
+    item: AXOLOTL_SPAWN_EGG
+    entity: AXOLOTL
+    name: "Аксолотль"
+    rarity: uncommon
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Милый подводный спутник"
+      - "с редкими расцветками."
+    abilities:
+      upgrades: [water-breathing, night-vision]
+    levels:
+      - {speed: 0.56, handling: 0.9, sprint: 1, price: 60}
+      - {speed: 0.92, handling: 1, sprint: 1.03, price: 90}
+      - {speed: 1.75, handling: 1.28, sprint: 1.12, price: 150}
+    buy-glow: 10000
+    buy-glow-currency: vault
+    appearance:
+      baby: false
+      scale: 1.7
+      variant: LUCY
+    skins:
+      gold:
+        name: "Золотой аксолотль"
+        item: GOLD_INGOT
+        preset: starlight
+        price: 25
+        currency: tokens
+        appearance:
+          variant: GOLD
+      blue:
+        name: "Синий аксолотль"
+        item: HEART_OF_THE_SEA
+        preset: ocean
+        price: 25
+        currency: tokens
+        appearance:
+          variant: BLUE
+  squid:
+    type: swimming
+    item: SQUID_SPAWN_EGG
+    entity: SQUID
+    name: "Спрут"
+    rarity: uncommon
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Мягкий подводный транспорт"
+      - "для тихих экспедиций"
+      - "и тёмных глубин."
+    abilities:
+      upgrades: [water-breathing, night-vision]
+      passive:
+        ink-lung:
+          name: "Чернильные жабры"
+          effect: WATER_BREATHING
+          amplifier: 0
+          description:
+            - "Позволяет дышать под водой без улучшений."
+    levels:
+      - {speed: 0.56, handling: 0.9, sprint: 1, price: 60}
+      - {speed: 0.92, handling: 1, sprint: 1.03, price: 90}
+      - {speed: 1.75, handling: 1.28, sprint: 1.12, price: 150}
+    buy-glow: 10000
+    buy-glow-currency: vault
+    appearance:
+      scale: 1.05
+    skins:
+      ocean:
+        name: "Океанический комплект"
+        item: NAUTILUS_SHELL
+        preset: ocean
+        price: 25
+        currency: tokens
+      starlight:
+        name: "Звёздный комплект"
+        item: AMETHYST_SHARD
+        preset: starlight
+        price: 25
+        currency: tokens
+  glow_squid:
+    type: swimming
+    item: GLOW_SQUID_SPAWN_EGG
+    entity: GLOW_SQUID
+    name: "Светящийся спрут"
+    rarity: rare
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Редкий светящийся проводник"
+      - "с заметным океаническим следом."
+    abilities:
+      upgrades: [water-breathing, night-vision]
+    levels:
+      - {speed: 0.6, handling: 0.9, sprint: 1, price: 120}
+      - {speed: 0.98, handling: 1, sprint: 1.03, price: 180}
+      - {speed: 1.85, handling: 1.28, sprint: 1.12, price: 300}
+    buy-glow: 15000
+    buy-glow-currency: vault
+    appearance:
+      scale: 1.05
+    skins:
+      ocean:
+        name: "Океанический комплект"
+        item: NAUTILUS_SHELL
+        preset: ocean
+        price: 40
+        currency: tokens
+      starlight:
+        name: "Звёздный комплект"
+        item: AMETHYST_SHARD
+        preset: starlight
+        price: 40
+        currency: tokens
+  cat:
+    type: walking
+    item: CAT_SPAWN_EGG
+    entity: CAT
+    name: "Кот"
+    rarity: uncommon
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Ночной разведчик с мягкими лапами"
+      - "и совершенно немягким размером ×10."
+    abilities:
+      passive:
+        cat-eyes:
+          name: "Кошачьи глаза"
+          effect: NIGHT_VISION
+          amplifier: 0
+          description:
+            - "Позволяет всаднику видеть в полной темноте."
+    levels:
+      - {speed: 1.45, handling: 0.9, sprint: 1, price: 60}
+      - {speed: 2.35, handling: 1, sprint: 1.03, price: 90}
+      - {speed: 5, handling: 1.28, sprint: 1.12, price: 150}
+    buy-glow: 10000
+    buy-glow-currency: vault
+    appearance: {baby: false, scale: 1}
+    size-tuning:
+      - {id: keychain, name: "Котёнок ×0.1", multiplier: 0.10, minimum-level: 1}
+      - {id: compact, name: "Компактный ×0.5", multiplier: 0.50, minimum-level: 1}
+      - {id: standard, name: "Обычный ×1", multiplier: 1.00, minimum-level: 1}
+      - {id: giant, name: "Тигр ×3", multiplier: 3.00, minimum-level: 2}
+      - {id: colossal, name: "Котодом ×10", multiplier: 10.00, minimum-level: 3}
+    skins:
+      starlight:
+        name: "Звёздный кот"
+        item: AMETHYST_SHARD
+        preset: starlight
+        price: 25
+        currency: tokens
+      shadow:
+        name: "Теневой кот"
+        item: ECHO_SHARD
+        preset: shadow
+        price: 25
+        currency: tokens
+  wolf:
+    type: walking
+    item: WOLF_SPAWN_EGG
+    entity: WOLF
+    name: "Волк"
+    rarity: rare
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Быстрый охотник, который усиливает"
+      - "и ноги, и оружие всадника."
+    abilities:
+      passive:
+        pack-pace:
+          name: "Темп стаи"
+          effect: SPEED
+          amplifier: 0
+          description:
+            - "Оставляет всаднику ускорение после поездки."
+        pack-strength:
+          name: "Сила стаи"
+          effect: STRENGTH
+          amplifier: 0
+          description:
+            - "Усиливает атаки всадника."
+    levels:
+      - {speed: 1.55, handling: 0.9, sprint: 1, price: 120}
+      - {speed: 2.5, handling: 1, sprint: 1.03, price: 180}
+      - {speed: 5.2, handling: 1.28, sprint: 1.12, price: 300}
+    buy-glow: 15000
+    buy-glow-currency: vault
+    appearance: {baby: false, scale: 1}
+    size-tuning:
+      - {id: compact, name: "Щенок ×0.5", multiplier: 0.50, minimum-level: 1}
+      - {id: standard, name: "Обычный ×1", multiplier: 1.00, minimum-level: 1}
+      - {id: giant, name: "Лютоволк ×3", multiplier: 3.00, minimum-level: 2}
+      - {id: colossal, name: "Вожак ×10", multiplier: 10.00, minimum-level: 3}
+    skins:
+      starlight:
+        name: "Звёздный волк"
+        item: AMETHYST_SHARD
+        preset: starlight
+        price: 40
+        currency: tokens
+      shadow:
+        name: "Теневой волк"
+        item: ECHO_SHARD
+        preset: shadow
+        price: 40
+        currency: tokens
+  armadillo:
+    type: walking
+    item: ARMADILLO_SPAWN_EGG
+    entity: ARMADILLO
+    name: "Броненосец"
+    rarity: uncommon
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Бронированный низкий транспорт"
+      - "для тех, кто не любит получать урон."
+    abilities:
+      passive:
+        shell-armor:
+          name: "Живая броня"
+          effect: RESISTANCE
+          amplifier: 1
+          description:
+            - "Даёт всаднику Сопротивление II."
+    levels:
+      - {speed: 1.45, handling: 0.9, sprint: 1, price: 60}
+      - {speed: 2.35, handling: 1, sprint: 1.03, price: 90}
+      - {speed: 5, handling: 1.28, sprint: 1.12, price: 150}
+    buy-glow: 10000
+    buy-glow-currency: vault
+    appearance: {baby: false, scale: 1}
+    size-tuning:
+      - {id: keychain, name: "Клубок ×0.1", multiplier: 0.10, minimum-level: 1}
+      - {id: standard, name: "Обычный ×1", multiplier: 1.00, minimum-level: 1}
+      - {id: giant, name: "Бронешар ×3", multiplier: 3.00, minimum-level: 2}
+      - {id: colossal, name: "Крепость ×10", multiplier: 10.00, minimum-level: 3}
+    skins:
+      starlight:
+        name: "Звёздный панцирь"
+        item: AMETHYST_SHARD
+        preset: starlight
+        price: 25
+        currency: tokens
+      shadow:
+        name: "Теневой панцирь"
+        item: ECHO_SHARD
+        preset: shadow
+        price: 25
+        currency: tokens
+  llama:
+    type: walking
+    item: LLAMA_SPAWN_EGG
+    entity: LLAMA
+    name: "Лама"
+    rarity: uncommon
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Караванный маунт с устойчивой походкой"
+      - "и мягким аварийным приземлением."
+    abilities:
+      passive:
+        caravan-balance:
+          name: "Баланс каравана"
+          effect: SLOW_FALLING
+          amplifier: 0
+          description:
+            - "Смягчает падение всадника с высоты."
+    levels:
+      - {speed: 1.45, handling: 0.9, sprint: 1, price: 60}
+      - {speed: 2.35, handling: 1, sprint: 1.03, price: 90}
+      - {speed: 5, handling: 1.28, sprint: 1.12, price: 150}
+    buy-glow: 10000
+    buy-glow-currency: vault
+    appearance: {baby: false, scale: 1}
+    size-tuning:
+      - {id: compact, name: "Компактная ×0.5", multiplier: 0.50, minimum-level: 1}
+      - {id: standard, name: "Обычная ×1", multiplier: 1.00, minimum-level: 1}
+      - {id: giant, name: "Караван ×3", multiplier: 3.00, minimum-level: 2}
+      - {id: colossal, name: "Шагающая башня ×10", multiplier: 10.00, minimum-level: 3}
+    skins:
+      starlight:
+        name: "Звёздный караван"
+        item: AMETHYST_SHARD
+        preset: starlight
+        price: 25
+        currency: tokens
+      shadow:
+        name: "Теневой караван"
+        item: ECHO_SHARD
+        preset: shadow
+        price: 25
+        currency: tokens
+  ocelot:
+    type: walking
+    item: OCELOT_SPAWN_EGG
+    entity: OCELOT
+    name: "Оцелот"
+    rarity: rare
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Джунглевый спринтер"
+      - "для резких и тихих вылазок."
+    abilities:
+      passive:
+        jungle-sprint:
+          name: "Джунглевый спринт"
+          effect: SPEED
+          amplifier: 1
+          description:
+            - "Даёт всаднику Скорость II."
+    levels:
+      - {speed: 1.55, handling: 0.9, sprint: 1, price: 120}
+      - {speed: 2.5, handling: 1, sprint: 1.03, price: 180}
+      - {speed: 5.2, handling: 1.28, sprint: 1.12, price: 300}
+    buy-glow: 15000
+    buy-glow-currency: vault
+    appearance: {baby: false, scale: 1}
+    size-tuning:
+      - {id: keychain, name: "Котёнок ×0.1", multiplier: 0.10, minimum-level: 1}
+      - {id: standard, name: "Обычный ×1", multiplier: 1.00, minimum-level: 1}
+      - {id: giant, name: "Ягуар ×3", multiplier: 3.00, minimum-level: 2}
+      - {id: colossal, name: "Джунгли ×10", multiplier: 10.00, minimum-level: 3}
+    skins:
+      starlight:
+        name: "Звёздный оцелот"
+        item: AMETHYST_SHARD
+        preset: starlight
+        price: 40
+        currency: tokens
+      shadow:
+        name: "Теневой оцелот"
+        item: ECHO_SHARD
+        preset: shadow
+        price: 40
+        currency: tokens
+  panda:
+    type: walking
+    item: PANDA_SPAWN_EGG
+    entity: PANDA
+    name: "Панда"
+    rarity: rare
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Тяжёлый медик на бамбуковом топливе"
+      - "с режимом гигантского пуфика."
+    abilities:
+      passive:
+        bamboo-rest:
+          name: "Бамбуковый отдых"
+          effect: REGENERATION
+          amplifier: 0
+          description:
+            - "Постепенно восстанавливает здоровье всадника."
+        soft-armor:
+          name: "Мягкая броня"
+          effect: RESISTANCE
+          amplifier: 0
+          description:
+            - "Снижает входящий урон."
+    levels:
+      - {speed: 1.55, handling: 0.9, sprint: 1, price: 120}
+      - {speed: 2.5, handling: 1, sprint: 1.03, price: 180}
+      - {speed: 5.2, handling: 1.28, sprint: 1.12, price: 300}
+    buy-glow: 15000
+    buy-glow-currency: vault
+    appearance: {baby: false, scale: 1}
+    size-tuning:
+      - {id: compact, name: "Пандочка ×0.5", multiplier: 0.50, minimum-level: 1}
+      - {id: standard, name: "Обычная ×1", multiplier: 1.00, minimum-level: 1}
+      - {id: giant, name: "Пуфик ×3", multiplier: 3.00, minimum-level: 2}
+      - {id: colossal, name: "Панда-гора ×10", multiplier: 10.00, minimum-level: 3}
+    skins:
+      starlight:
+        name: "Звёздная панда"
+        item: AMETHYST_SHARD
+        preset: starlight
+        price: 40
+        currency: tokens
+      shadow:
+        name: "Теневая панда"
+        item: ECHO_SHARD
+        preset: shadow
+        price: 40
+        currency: tokens
+  pufferfish:
+    type: swimming
+    item: PUFFERFISH_SPAWN_EGG
+    entity: PUFFERFISH
+    name: "Иглобрюх"
+    rarity: rare
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Подводный шар с характером"
+      - "и аварийной бронёй из иголок."
+    abilities:
+      upgrades: [night-vision]
+      passive:
+        bubble-breath:
+          name: "Воздушный пузырь"
+          effect: WATER_BREATHING
+          amplifier: 0
+          description:
+            - "Позволяет всаднику дышать под водой."
+        needle-armor:
+          name: "Игольчатая броня"
+          effect: RESISTANCE
+          amplifier: 0
+          description:
+            - "Снижает входящий урон всаднику."
+    levels:
+      - {speed: 0.6, handling: 0.9, sprint: 1, price: 120}
+      - {speed: 0.98, handling: 1, sprint: 1.03, price: 180}
+      - {speed: 1.85, handling: 1.28, sprint: 1.12, price: 300}
+    buy-glow: 15000
+    buy-glow-currency: vault
+    appearance: {scale: 1}
+    size-tuning:
+      - {id: keychain, name: "Пузырёк ×0.1", multiplier: 0.10, minimum-level: 1}
+      - {id: standard, name: "Обычный ×1", multiplier: 1.00, minimum-level: 1}
+      - {id: giant, name: "Мина ×3", multiplier: 3.00, minimum-level: 2}
+      - {id: colossal, name: "Морская мина ×10", multiplier: 10.00, minimum-level: 3}
+    skins:
+      ocean:
+        name: "Океанический иглобрюх"
+        item: NAUTILUS_SHELL
+        preset: ocean
+        price: 40
+        currency: tokens
+      starlight:
+        name: "Звёздный иглобрюх"
+        item: AMETHYST_SHARD
+        preset: starlight
+        price: 40
+        currency: tokens
+  magma_cube:
+    type: walking
+    item: MAGMA_CUBE_SPAWN_EGG
+    entity: MAGMA_CUBE
+    name: "Магмовый куб"
+    rarity: epic
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Прыгающая печка Нижнего мира"
+      - "с режимом десятикратного бедствия."
+    abilities:
+      high-jump:
+        name: "Магмовый батут"
+        multiplier: 1.8
+        description:
+          - "Запускает наземного маунта заметно выше."
+      passive:
+        molten-core:
+          name: "Расплавленное ядро"
+          effect: FIRE_RESISTANCE
+          amplifier: 0
+          description:
+            - "Защищает всадника от огня и лавы."
+    levels:
+      - {speed: 1.6, handling: 0.9, sprint: 1, price: 240}
+      - {speed: 2.6, handling: 1, sprint: 1.03, price: 360}
+      - {speed: 5.4, handling: 1.28, sprint: 1.12, price: 600}
+    buy-glow: 20000
+    buy-glow-currency: vault
+    appearance: {scale: 1}
+    size-tuning:
+      - {id: keychain, name: "Искра ×0.1", multiplier: 0.10, minimum-level: 1}
+      - {id: standard, name: "Обычный ×1", multiplier: 1.00, minimum-level: 1}
+      - {id: giant, name: "Печь ×3", multiplier: 3.00, minimum-level: 2}
+      - {id: colossal, name: "Магмоблок ×10", multiplier: 10.00, minimum-level: 3}
+    skins:
+      flame:
+        name: "Огненное ядро"
+        item: BLAZE_POWDER
+        preset: flame
+        price: 70
+        currency: tokens
+      soulfire:
+        name: "Ядро душ"
+        item: SOUL_LANTERN
+        preset: soulfire
+        price: 70
+        currency: tokens
+  mooshroom:
+    type: walking
+    item: MOOSHROOM_SPAWN_EGG
+    entity: MOOSHROOM
+    name: "Мушрум"
+    rarity: rare
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Грибная полевая лечебница"
+      - "на четырёх ногах."
+    abilities:
+      passive:
+        mushroom-stew:
+          name: "Грибной бульон"
+          effect: REGENERATION
+          amplifier: 0
+          description:
+            - "Постепенно восстанавливает здоровье всадника."
+    levels:
+      - {speed: 1.55, handling: 0.9, sprint: 1, price: 120}
+      - {speed: 2.5, handling: 1, sprint: 1.03, price: 180}
+      - {speed: 5.2, handling: 1.28, sprint: 1.12, price: 300}
+    buy-glow: 15000
+    buy-glow-currency: vault
+    appearance: {baby: false, scale: 1}
+    size-tuning:
+      - {id: compact, name: "Грибочек ×0.5", multiplier: 0.50, minimum-level: 1}
+      - {id: standard, name: "Обычный ×1", multiplier: 1.00, minimum-level: 1}
+      - {id: giant, name: "Грибница ×3", multiplier: 3.00, minimum-level: 2}
+      - {id: colossal, name: "Грибной остров ×10", multiplier: 10.00, minimum-level: 3}
+    skins:
+      starlight:
+        name: "Звёздный мушрум"
+        item: AMETHYST_SHARD
+        preset: starlight
+        price: 40
+        currency: tokens
+      shadow:
+        name: "Теневой мушрум"
+        item: ECHO_SHARD
+        preset: shadow
+        price: 40
+        currency: tokens
+  tadpole:
+    type: swimming
+    item: TADPOLE_BUCKET
+    entity: TADPOLE
+    name: "Головастик"
+    rarity: uncommon
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Крошечная торпеда, которая умеет"
+      - "стать нелепо огромной."
+    abilities:
+      upgrades: [night-vision]
+      passive:
+        tadpole-gills:
+          name: "Жабры головастика"
+          effect: WATER_BREATHING
+          amplifier: 0
+          description:
+            - "Позволяет всаднику дышать под водой."
+        tadpole-torpedo:
+          name: "Живая торпеда"
+          effect: DOLPHINS_GRACE
+          amplifier: 0
+          description:
+            - "Ускоряет самостоятельное плавание всадника."
+    levels:
+      - {speed: 0.56, handling: 0.9, sprint: 1, price: 60}
+      - {speed: 0.92, handling: 1, sprint: 1.03, price: 90}
+      - {speed: 1.75, handling: 1.28, sprint: 1.12, price: 150}
+    buy-glow: 10000
+    buy-glow-currency: vault
+    appearance: {scale: 1}
+    size-tuning:
+      - {id: keychain, name: "Капля ×0.1", multiplier: 0.10, minimum-level: 1}
+      - {id: standard, name: "Обычный ×1", multiplier: 1.00, minimum-level: 1}
+      - {id: giant, name: "Торпеда ×3", multiplier: 3.00, minimum-level: 2}
+      - {id: colossal, name: "Подлодка ×10", multiplier: 10.00, minimum-level: 3}
+    skins:
+      ocean:
+        name: "Океанический головастик"
+        item: NAUTILUS_SHELL
+        preset: ocean
+        price: 25
+        currency: tokens
+      starlight:
+        name: "Звёздный головастик"
+        item: AMETHYST_SHARD
+        preset: starlight
+        price: 25
+        currency: tokens
+  polar_bear:
+    type: walking
+    item: POLAR_BEAR_SPAWN_EGG
+    entity: POLAR_BEAR
+    passenger-seats: 1
+    name: "Белый медведь"
+    rarity: epic
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Арктический танк, который защищает"
+      - "всадника и давит врагов под собой."
+    abilities:
+      passive:
+        arctic-force:
+          name: "Арктическая сила"
+          effect: STRENGTH
+          amplifier: 0
+          description:
+            - "Усиливает атаки всадника."
+        winter-coat:
+          name: "Зимняя шкура"
+          effect: RESISTANCE
+          amplifier: 0
+          description:
+            - "Снижает входящий урон."
+    behaviors:
+      bear-trample:
+        type: trample
+        name: "Медвежий топот"
+        description:
+          - "Враждебные мобы под медведем"
+          - "получают урон во время движения."
+        cooldown: 1s
+        minimum-speed-fraction: 0.2
+        horizontal-padding: 0.25
+        downward-reach: 0.8
+        damage: 2.5
+        maximum-targets: 4
+    levels:
+      - {speed: 1.6, handling: 0.9, sprint: 1, price: 240}
+      - {speed: 2.6, handling: 1, sprint: 1.03, price: 360}
+      - {speed: 5.4, handling: 1.28, sprint: 1.12, price: 600}
+    buy-glow: 20000
+    buy-glow-currency: vault
+    appearance: {baby: false, scale: 1}
+    size-tuning:
+      - {id: compact, name: "Медвежонок ×0.5", multiplier: 0.50, minimum-level: 1}
+      - {id: standard, name: "Обычный ×1", multiplier: 1.00, minimum-level: 1}
+      - {id: giant, name: "Арктический танк ×3", multiplier: 3.00, minimum-level: 2}
+      - {id: colossal, name: "Айсберг ×10", multiplier: 10.00, minimum-level: 3}
+    skins:
+      starlight:
+        name: "Звёздный медведь"
+        item: AMETHYST_SHARD
+        preset: starlight
+        price: 70
+        currency: tokens
+      shadow:
+        name: "Полярная тень"
+        item: ECHO_SHARD
+        preset: shadow
+        price: 70
+        currency: tokens
+  copper_golem:
+    type: walking
+    item: COPPER_GOLEM_SPAWN_EGG
+    entity: COPPER_GOLEM
+    name: "Медный голем"
+    rarity: epic
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Заводной помощник, превращающий"
+      - "поездку в рабочую смену."
+    abilities:
+      passive:
+        copper-tools:
+          name: "Медные инструменты"
+          effect: HASTE
+          amplifier: 1
+          description:
+            - "Даёт всаднику Спешку II."
+        lucky-button:
+          name: "Счастливая кнопка"
+          effect: LUCK
+          amplifier: 0
+          description:
+            - "Даёт всаднику эффект удачи."
+    levels:
+      - {speed: 1.6, handling: 0.9, sprint: 1, price: 240}
+      - {speed: 2.6, handling: 1, sprint: 1.03, price: 360}
+      - {speed: 5.4, handling: 1.28, sprint: 1.12, price: 600}
+    buy-glow: 20000
+    buy-glow-currency: vault
+    appearance: {scale: 1}
+    size-tuning:
+      - {id: keychain, name: "Заводной ×0.1", multiplier: 0.10, minimum-level: 1}
+      - {id: compact, name: "Компактный ×0.5", multiplier: 0.50, minimum-level: 1}
+      - {id: standard, name: "Обычный ×1", multiplier: 1.00, minimum-level: 1}
+      - {id: giant, name: "Механизм ×3", multiplier: 3.00, minimum-level: 2}
+      - {id: colossal, name: "Медный завод ×10", multiplier: 10.00, minimum-level: 3}
+    skins:
+      starlight:
+        name: "Звёздная медь"
+        item: AMETHYST_SHARD
+        preset: starlight
+        price: 70
+        currency: tokens
+      shadow:
+        name: "Тёмная патина"
+        item: ECHO_SHARD
+        preset: shadow
+        price: 70
+        currency: tokens
+  iron_golem:
+    type: walking
+    item: IRON_GOLEM_SPAWN_EGG
+    entity: IRON_GOLEM
+    name: "Железный голем"
+    rarity: legendary
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: vault
+    description:
+      - "Шагающая крепость для всадника"
+      - "и каток для враждебных мобов."
+    abilities:
+      passive:
+        iron-fist:
+          name: "Железный кулак"
+          effect: STRENGTH
+          amplifier: 1
+          description:
+            - "Даёт всаднику Силу II."
+        iron-shell:
+          name: "Железная оболочка"
+          effect: RESISTANCE
+          amplifier: 1
+          description:
+            - "Даёт всаднику Сопротивление II."
+    behaviors:
+      iron-trample:
+        type: trample
+        name: "Железный марш"
+        description:
+          - "Враждебные мобы под големом"
+          - "получают урон от каждого прохода."
+        cooldown: 1s
+        minimum-speed-fraction: 0.15
+        horizontal-padding: 0.4
+        downward-reach: 1.0
+        damage: 3.5
+        maximum-targets: 6
+    levels:
+      - {speed: 1.65, handling: 0.9, sprint: 1, price: 500000}
+      - {speed: 2.7, handling: 1, sprint: 1.03, price: 1000000}
+      - {speed: 5.6, handling: 1.28, sprint: 1.12, price: 2000000}
+    buy-glow: 50000
+    buy-glow-currency: vault
+    appearance: {scale: 1}
+    size-tuning:
+      - {id: keychain, name: "Фигурка ×0.1", multiplier: 0.10, minimum-level: 1}
+      - {id: standard, name: "Обычный ×1", multiplier: 1.00, minimum-level: 1}
+      - {id: giant, name: "Крепость ×3", multiplier: 3.00, minimum-level: 2}
+      - {id: colossal, name: "Мегаполис ×10", multiplier: 10.00, minimum-level: 3}
+    skins:
+      starlight:
+        name: "Звёздное железо"
+        item: AMETHYST_SHARD
+        preset: starlight
+        price: 120
+        currency: tokens
+      shadow:
+        name: "Тёмное железо"
+        item: ECHO_SHARD
+        preset: shadow
+        price: 120
+        currency: tokens
+  trader_llama:
+    type: walking
+    item: TRADER_LLAMA_SPAWN_EGG
+    entity: TRADER_LLAMA
+    name: "Лама торговца"
+    rarity: rare
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Караванная удача с быстрыми ногами"
+      - "и привычкой уходить в закат."
+    abilities:
+      passive:
+        caravan-luck:
+          name: "Удача каравана"
+          effect: LUCK
+          amplifier: 0
+          description:
+            - "Даёт всаднику эффект удачи."
+        trader-pace:
+          name: "Срочная доставка"
+          effect: SPEED
+          amplifier: 0
+          description:
+            - "Оставляет всаднику ускорение."
+    levels:
+      - {speed: 1.55, handling: 0.9, sprint: 1, price: 120}
+      - {speed: 2.5, handling: 1, sprint: 1.03, price: 180}
+      - {speed: 5.2, handling: 1.28, sprint: 1.12, price: 300}
+    buy-glow: 15000
+    buy-glow-currency: vault
+    appearance: {baby: false, scale: 1}
+    size-tuning:
+      - {id: compact, name: "Компактная ×0.5", multiplier: 0.50, minimum-level: 1}
+      - {id: standard, name: "Обычная ×1", multiplier: 1.00, minimum-level: 1}
+      - {id: giant, name: "Караван ×3", multiplier: 3.00, minimum-level: 2}
+      - {id: colossal, name: "Торговый центр ×10", multiplier: 10.00, minimum-level: 3}
+    skins:
+      starlight:
+        name: "Звёздный караван"
+        item: AMETHYST_SHARD
+        preset: starlight
+        price: 40
+        currency: tokens
+      shadow:
+        name: "Теневой караван"
+        item: ECHO_SHARD
+        preset: shadow
+        price: 40
+        currency: tokens
+  snow_golem:
+    type: walking
+    item: SNOW_GOLEM_SPAWN_EGG
+    entity: SNOW_GOLEM
+    name: "Снежный голем"
+    rarity: uncommon
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Лёгкий зимний транспорт"
+      - "с мягким падением и быстрым отходом."
+    abilities:
+      passive:
+        snow-drift:
+          name: "Снежный дрейф"
+          effect: SLOW_FALLING
+          amplifier: 0
+          description:
+            - "Смягчает падение всадника."
+        winter-dash:
+          name: "Зимний рывок"
+          effect: SPEED
+          amplifier: 0
+          description:
+            - "Оставляет всаднику ускорение."
+    levels:
+      - {speed: 1.45, handling: 0.9, sprint: 1, price: 60}
+      - {speed: 2.35, handling: 1, sprint: 1.03, price: 90}
+      - {speed: 5, handling: 1.28, sprint: 1.12, price: 150}
+    buy-glow: 10000
+    buy-glow-currency: vault
+    appearance: {scale: 1}
+    size-tuning:
+      - {id: keychain, name: "Снеговичок ×0.1", multiplier: 0.10, minimum-level: 1}
+      - {id: standard, name: "Обычный ×1", multiplier: 1.00, minimum-level: 1}
+      - {id: giant, name: "Сугроб ×3", multiplier: 3.00, minimum-level: 2}
+      - {id: colossal, name: "Снежная гора ×10", multiplier: 10.00, minimum-level: 3}
+    skins:
+      starlight:
+        name: "Звёздный снег"
+        item: AMETHYST_SHARD
+        preset: starlight
+        price: 25
+        currency: tokens
+      shadow:
+        name: "Тёмный снег"
+        item: ECHO_SHARD
+        preset: shadow
+        price: 25
+        currency: tokens
+  villager:
+    type: walking
+    item: VILLAGER_SPAWN_EGG
+    entity: VILLAGER
+    name: "Крестьянин"
+    rarity: rare
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Самый сомнительный общественный транспорт"
+      - "с неожиданно полезной аурой."
+    abilities:
+      passive:
+        village-luck:
+          name: "Деревенская удача"
+          effect: LUCK
+          amplifier: 0
+          description:
+            - "Даёт всаднику эффект удачи."
+        village-care:
+          name: "Забота деревни"
+          effect: REGENERATION
+          amplifier: 0
+          description:
+            - "Постепенно восстанавливает здоровье."
+    levels:
+      - {speed: 1.55, handling: 0.9, sprint: 1, price: 120}
+      - {speed: 2.5, handling: 1, sprint: 1.03, price: 180}
+      - {speed: 5.2, handling: 1.28, sprint: 1.12, price: 300}
+    buy-glow: 15000
+    buy-glow-currency: vault
+    appearance: {baby: false, scale: 1}
+    size-tuning:
+      - {id: keychain, name: "Мини-житель ×0.1", multiplier: 0.10, minimum-level: 1}
+      - {id: standard, name: "Обычный ×1", multiplier: 1.00, minimum-level: 1}
+      - {id: giant, name: "Староста ×3", multiplier: 3.00, minimum-level: 2}
+      - {id: colossal, name: "Деревня ×10", multiplier: 10.00, minimum-level: 3}
+    skins:
+      starlight:
+        name: "Звёздный крестьянин"
+        item: AMETHYST_SHARD
+        preset: starlight
+        price: 40
+        currency: tokens
+      shadow:
+        name: "Теневой крестьянин"
+        item: ECHO_SHARD
+        preset: shadow
+        price: 40
+        currency: tokens
+  wandering_trader:
+    type: walking
+    item: WANDERING_TRADER_SPAWN_EGG
+    entity: WANDERING_TRADER
+    name: "Странствующий торговец"
+    rarity: rare
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Передвижной рынок, который наконец"
+      - "движется туда, куда нужно вам."
+    abilities:
+      passive:
+        road-luck:
+          name: "Удача странника"
+          effect: LUCK
+          amplifier: 0
+          description:
+            - "Даёт всаднику эффект удачи."
+        road-legs:
+          name: "Дорожные ноги"
+          effect: SPEED
+          amplifier: 0
+          description:
+            - "Оставляет всаднику ускорение."
+    levels:
+      - {speed: 1.55, handling: 0.9, sprint: 1, price: 120}
+      - {speed: 2.5, handling: 1, sprint: 1.03, price: 180}
+      - {speed: 5.2, handling: 1.28, sprint: 1.12, price: 300}
+    buy-glow: 15000
+    buy-glow-currency: vault
+    appearance: {scale: 1}
+    size-tuning:
+      - {id: keychain, name: "Ларёк ×0.1", multiplier: 0.10, minimum-level: 1}
+      - {id: standard, name: "Обычный ×1", multiplier: 1.00, minimum-level: 1}
+      - {id: giant, name: "Рынок ×3", multiplier: 3.00, minimum-level: 2}
+      - {id: colossal, name: "Гипермаркет ×10", multiplier: 10.00, minimum-level: 3}
+    skins:
+      starlight:
+        name: "Звёздный торговец"
+        item: AMETHYST_SHARD
+        preset: starlight
+        price: 40
+        currency: tokens
+      shadow:
+        name: "Теневой торговец"
+        item: ECHO_SHARD
+        preset: shadow
+        price: 40
+        currency: tokens
+  skeleton_horse:
+    type: walking
+    item: SKELETON_HORSE_SPAWN_EGG
+    entity: SKELETON_HORSE
+    name: "Лошадь-скелет"
+    rarity: epic
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Ночная костяная кавалерия"
+      - "с высоким прыжком и быстрым отходом."
+    abilities:
+      high-jump:
+        name: "Костяной галоп"
+        multiplier: 1.55
+        description:
+          - "Прыгает выше обычных наземных маунтов."
+      passive:
+        grave-sight:
+          name: "Могильный взгляд"
+          effect: NIGHT_VISION
+          amplifier: 0
+          description:
+            - "Позволяет всаднику видеть в темноте."
+        deathless-pace:
+          name: "Неутомимый галоп"
+          effect: SPEED
+          amplifier: 0
+          description:
+            - "Оставляет всаднику ускорение."
+    levels:
+      - {speed: 1.6, handling: 0.9, sprint: 1, price: 240}
+      - {speed: 2.6, handling: 1, sprint: 1.03, price: 360}
+      - {speed: 5.4, handling: 1.28, sprint: 1.12, price: 600}
+    buy-glow: 20000
+    buy-glow-currency: vault
+    appearance: {baby: false, scale: 1}
+    size-tuning:
+      - {id: keychain, name: "Костяшка ×0.1", multiplier: 0.10, minimum-level: 1}
+      - {id: standard, name: "Обычная ×1", multiplier: 1.00, minimum-level: 1}
+      - {id: giant, name: "Кавалерия ×3", multiplier: 3.00, minimum-level: 2}
+      - {id: colossal, name: "Конец света ×10", multiplier: 10.00, minimum-level: 3}
+    skins:
+      soulfire:
+        name: "Кавалерия душ"
+        item: SOUL_LANTERN
+        preset: soulfire
+        price: 70
+        currency: tokens
+      shadow:
+        name: "Теневая кавалерия"
+        item: ECHO_SHARD
+        preset: shadow
+        price: 70
+        currency: tokens
+  # Нарочито абсурдная коллекция: один моб, много размеров, никаких дублей.
+  mega_warden:
+    type: walking
+    item: WARDEN_SPAWN_EGG
+    entity: WARDEN
+    name: "Хранитель"
+    rarity: legendary
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Глубинный тяжеловес"
+      - "с размерами от ×0.1 до ×10."
+    abilities:
+      passive:
+        echo-sight:
+          name: "Эхолокация"
+          effect: NIGHT_VISION
+          amplifier: 0
+          description:
+            - "Позволяет видеть даже в полной темноте."
+        ancient-force:
+          name: "Древняя сила"
+          effect: STRENGTH
+          amplifier: 0
+          description:
+            - "Усиливает атаки всадника."
+        deep-armor:
+          name: "Глубинная броня"
+          effect: RESISTANCE
+          amplifier: 0
+          description:
+            - "Снижает получаемый всадником урон."
+    motion:
+      acceleration-time: 0ms
+      deceleration-time: 0ms
+      turn-time: 0ms
+    levels:
+      - {speed: 1.6, handling: 0.9, sprint: 1, price: 480}
+      - {speed: 2.6, handling: 1, sprint: 1.03, price: 720}
+      - {speed: 5.4, handling: 1.28, sprint: 1.12, price: 1200}
+    buy-glow: 25000
+    buy-glow-currency: vault
+    appearance:
+      scale: 1
+    size-tuning:
+      - {id: keychain, name: "Эхо-брелок ×0.1", multiplier: 0.10, minimum-level: 1}
+      - {id: compact, name: "Компактный ×0.5", multiplier: 0.50, minimum-level: 1}
+      - {id: standard, name: "Обычный ×1", multiplier: 1.00, minimum-level: 1}
+      - {id: giant, name: "Исполин ×3", multiplier: 3.00, minimum-level: 2}
+      - {id: colossal, name: "Катаклизм ×10", multiplier: 10.00, minimum-level: 3}
+    skins:
+      shadow:
+        name: "Теневой исполин"
+        item: ECHO_SHARD
+        preset: shadow
+        price: 120
+        currency: tokens
+      soulfire:
+        name: "Хранитель душ"
+        item: SOUL_LANTERN
+        preset: soulfire
+        price: 120
+        currency: tokens
+  pocket_chicken:
+    type: walking
+    item: CHICKEN_SPAWN_EGG
+    entity: CHICKEN
+    name: "Курица"
+    rarity: uncommon
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "От карманной паники ×0.1"
+      - "до куриного титана ×10."
+    abilities:
+      high-jump:
+        name: "Панический подскок"
+        multiplier: 1.35
+        description:
+          - "Подпрыгивает выше обычных наземных маунтов."
+      passive:
+        feather:
+          name: "Пёрышко"
+          effect: SLOW_FALLING
+          amplifier: 0
+          description:
+            - "Смягчает падение всадника после прыжка."
+    levels:
+      - {speed: 1.45, handling: 0.9, sprint: 1, price: 60}
+      - {speed: 2.35, handling: 1, sprint: 1.03, price: 90}
+      - {speed: 5, handling: 1.28, sprint: 1.12, price: 150}
+    buy-glow: 10000
+    buy-glow-currency: vault
+    appearance:
+      baby: false
+      scale: 1
+    size-tuning:
+      - {id: keychain, name: "Брелок ×0.1", multiplier: 0.10, minimum-level: 1}
+      - {id: compact, name: "Компактная ×0.5", multiplier: 0.50, minimum-level: 1}
+      - {id: standard, name: "Обычная ×1", multiplier: 1.00, minimum-level: 1}
+      - {id: giant, name: "Гигантская ×3", multiplier: 3.00, minimum-level: 2}
+      - {id: colossal, name: "Куриный титан ×10", multiplier: 10.00, minimum-level: 3}
+    skins:
+      starlight:
+        name: "Звёздная курица"
+        item: AMETHYST_SHARD
+        preset: starlight
+        price: 25
+        currency: tokens
+      flame:
+        name: "Огненная курица"
+        item: BLAZE_POWDER
+        preset: flame
+        price: 25
+        currency: tokens
+  guardian:
+    type: swimming
+    item: GUARDIAN_SPAWN_EGG
+    entity: GUARDIAN
+    name: "Страж"
+    rarity: epic
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Бронированный властелин глубин"
+      - "с дорогой эпической отделкой."
+    abilities:
+      upgrades: [water-breathing, night-vision]
+    levels:
+      - {speed: 0.65, handling: 0.9, sprint: 1, price: 240}
+      - {speed: 1.05, handling: 1, sprint: 1.03, price: 360}
+      - {speed: 1.95, handling: 1.28, sprint: 1.12, price: 600}
+    buy-glow: 20000
+    buy-glow-currency: vault
+    appearance:
+      scale: 1.05
+    skins:
+      ocean:
+        name: "Океанический комплект"
+        item: NAUTILUS_SHELL
+        preset: ocean
+        price: 70
+        currency: tokens
+      shadow:
+        name: "Теневой комплект"
+        item: ECHO_SHARD
+        preset: shadow
+        price: 70
+        currency: tokens
+  sea_turtle:
+    type: swimming
+    item: TURTLE_SPAWN_EGG
+    entity: TURTLE
+    name: "Морская черепаха"
+    rarity: rare
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Надёжная морская путешественница"
+      - "с плавным разгоном"
+      - "и сильным финалом."
+    abilities:
+      upgrades: [water-breathing, night-vision]
+    levels:
+      - {speed: 0.6, handling: 0.9, sprint: 1, price: 120}
+      - {speed: 0.98, handling: 1, sprint: 1.03, price: 180}
+      - {speed: 1.85, handling: 1.28, sprint: 1.12, price: 300}
+    buy-glow: 15000
+    buy-glow-currency: vault
+    appearance:
+      baby: false
+      scale: 1.2
+    skins:
+      ocean:
+        name: "Океанический комплект"
+        item: NAUTILUS_SHELL
+        preset: ocean
+        price: 40
+        currency: tokens
+      starlight:
+        name: "Звёздный комплект"
+        item: AMETHYST_SHARD
+        preset: starlight
+        price: 40
+        currency: tokens
+  hoglin:
+    type: walking
+    item: HOGLIN_SPAWN_EGG
+    entity: HOGLIN
+    name: "Хоглин"
+    rarity: epic
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Тяжёлый незерский таран,"
+      - "который разбрасывает врагов с дороги."
+    abilities:
+      passive:
+        nether-hide:
+          name: "Незерская шкура"
+          effect: RESISTANCE
+          amplifier: 0
+          description:
+            - "Даёт всаднику Сопротивление I."
+    behaviors:
+      hoglin-ram:
+        type: ram
+        name: "Клыкастый таран"
+        description:
+          - "Нажмите спринт при движении вперёд."
+          - "Первый враждебный моб получит урон."
+        cooldown: 4s
+        damage: 4.5
+      hoglin-trample:
+        type: trample
+        name: "Тяжёлый топот"
+        description:
+          - "Враги под корпусом получают урон"
+          - "во время движения."
+        damage: 2.5
+        maximum-targets: 4
+    motion:
+      acceleration-time: 0ms
+      deceleration-time: 0ms
+      turn-time: 0ms
+    levels:
+      - {speed: 1.6, handling: 0.9, sprint: 1, price: 240}
+      - {speed: 2.6, handling: 1, sprint: 1.03, price: 360}
+      - {speed: 5.4, handling: 1.28, sprint: 1.12, price: 600}
+    buy-glow: 20000
+    buy-glow-currency: vault
+    appearance: {baby: false, scale: 1}
+    skins:
+      soulfire:
+        name: "Клыки душ"
+        item: SOUL_LANTERN
+        preset: soulfire
+        price: 70
+        currency: tokens
+      shadow:
+        name: "Багровая тень"
+        item: ECHO_SHARD
+        preset: shadow
+        price: 70
+        currency: tokens
+  shulker:
+    type: flying
+    control: vehicle
+    item: SHULKER_SPAWN_EGG
+    entity: SHULKER
+    name: "Шалкер"
+    rarity: rare
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Летающая коробка с открытой крышкой"
+      - "и неожиданно мягкой посадкой."
+    abilities:
+      passive:
+        shell:
+          name: "Панцирь шалкера"
+          effect: RESISTANCE
+          amplifier: 0
+          description:
+            - "Снижает входящий урон."
+        levitation-brake:
+          name: "Воздушный тормоз"
+          effect: SLOW_FALLING
+          amplifier: 0
+          description:
+            - "Страхует всадника после полёта."
+    levels:
+      - {speed: 0.55, handling: 0.9, sprint: 1, price: 120}
+      - {speed: 0.95, handling: 1, sprint: 1.03, price: 180}
+      - {speed: 1.9, handling: 1.28, sprint: 1.12, price: 300}
+    buy-glow: 15000
+    buy-glow-currency: vault
+    appearance: {scale: 1}
+    skins:
+      starlight:
+        name: "Звёздный шалкер"
+        item: AMETHYST_SHARD
+        preset: starlight
+        price: 40
+        currency: tokens
+      shadow:
+        name: "Шалкер Бездны"
+        item: ECHO_SHARD
+        preset: shadow
+        price: 40
+        currency: tokens
+  endermite:
+    type: walking
+    item: ENDERMITE_SPAWN_EGG
+    entity: ENDERMITE
+    name: "Эндермит"
+    rarity: common
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Крошечная межмировая табуретка,"
+      - "которая бегает быстрее здравого смысла."
+    abilities:
+      passive:
+        ender-rush:
+          name: "Эндер-рывок"
+          effect: SPEED
+          amplifier: 1
+          description:
+            - "Даёт всаднику Скорость II."
+    levels:
+      - {speed: 1.8, handling: 0.95, sprint: 1, price: 30}
+      - {speed: 2.9, handling: 1.05, sprint: 1.03, price: 45}
+      - {speed: 5.8, handling: 1.28, sprint: 1.12, price: 75}
+    buy-glow: 5000
+    buy-glow-currency: vault
+    appearance: {scale: 1.2}
+    skins:
+      starlight:
+        name: "Звёздный эндермит"
+        item: AMETHYST_SHARD
+        preset: starlight
+        price: 15
+        currency: tokens
+      shadow:
+        name: "Эндермит Бездны"
+        item: ECHO_SHARD
+        preset: shadow
+        price: 15
+        currency: tokens
+  piglin:
+    type: walking
+    item: PIGLIN_SPAWN_EGG
+    entity: PIGLIN
+    name: "Пиглин"
+    rarity: uncommon
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Золотолюбивый проводник,"
+      - "который не превращается вне Незера."
+    abilities:
+      passive:
+        gold-instinct:
+          name: "Золотое чутьё"
+          effect: LUCK
+          amplifier: 0
+          description:
+            - "Даёт всаднику эффект удачи."
+        nether-blood:
+          name: "Кровь Незера"
+          effect: FIRE_RESISTANCE
+          amplifier: 0
+          description:
+            - "Защищает всадника от огня и лавы."
+    levels:
+      - {speed: 1.5, handling: 0.9, sprint: 1, price: 60}
+      - {speed: 2.45, handling: 1, sprint: 1.03, price: 90}
+      - {speed: 5.1, handling: 1.28, sprint: 1.12, price: 150}
+    buy-glow: 10000
+    buy-glow-currency: vault
+    appearance: {baby: false, scale: 1}
+    skins:
+      flame:
+        name: "Позолоченный пиглин"
+        item: GOLD_INGOT
+        preset: flame
+        price: 25
+        currency: tokens
+      shadow:
+        name: "Чёрное золото"
+        item: ECHO_SHARD
+        preset: shadow
+        price: 25
+        currency: tokens
+  wither_skeleton:
+    type: walking
+    item: WITHER_SKELETON_SPAWN_EGG
+    entity: WITHER_SKELETON
+    name: "Скелет-иссушитель"
+    rarity: epic
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Высокий незерский всадник"
+      - "для огненных дорог и тяжёлых драк."
+    abilities:
+      passive:
+        wither-force:
+          name: "Сила иссушения"
+          effect: STRENGTH
+          amplifier: 0
+          description:
+            - "Усиливает атаки всадника."
+        ash-proof:
+          name: "Жар костей"
+          effect: FIRE_RESISTANCE
+          amplifier: 0
+          description:
+            - "Защищает всадника от огня и лавы."
+    levels:
+      - {speed: 1.6, handling: 0.9, sprint: 1, price: 240}
+      - {speed: 2.6, handling: 1, sprint: 1.03, price: 360}
+      - {speed: 5.4, handling: 1.28, sprint: 1.12, price: 600}
+    buy-glow: 20000
+    buy-glow-currency: vault
+    appearance: {scale: 1}
+    skins:
+      soulfire:
+        name: "Иссушитель душ"
+        item: SOUL_LANTERN
+        preset: soulfire
+        price: 70
+        currency: tokens
+      shadow:
+        name: "Чёрный скелет"
+        item: ECHO_SHARD
+        preset: shadow
+        price: 70
+        currency: tokens
+  vindicator:
+    type: walking
+    item: VINDICATOR_SPAWN_EGG
+    entity: VINDICATOR
+    name: "Поборник"
+    rarity: rare
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Злой рейдер с топором,"
+      - "который любит прямые маршруты."
+    abilities:
+      passive:
+        raid-force:
+          name: "Ярость рейда"
+          effect: STRENGTH
+          amplifier: 0
+          description:
+            - "Даёт всаднику Силу I."
+    behaviors:
+      vindicator-ram:
+        type: ram
+        name: "Прорыв строя"
+        description:
+          - "Спринт вперёд сбивает первого"
+          - "враждебного моба на пути."
+        cooldown: 4s
+        damage: 3.0
+    levels:
+      - {speed: 1.55, handling: 0.9, sprint: 1, price: 120}
+      - {speed: 2.55, handling: 1, sprint: 1.03, price: 180}
+      - {speed: 5.2, handling: 1.28, sprint: 1.12, price: 300}
+    buy-glow: 15000
+    buy-glow-currency: vault
+    appearance: {scale: 1}
+    skins:
+      starlight:
+        name: "Звёздный поборник"
+        item: AMETHYST_SHARD
+        preset: starlight
+        price: 40
+        currency: tokens
+      shadow:
+        name: "Ночной рейдер"
+        item: ECHO_SHARD
+        preset: shadow
+        price: 40
+        currency: tokens
+  creaking:
+    type: walking
+    item: CREAKING_SPAWN_EGG
+    entity: CREAKING
+    name: "Скрипун"
+    rarity: epic
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Живая бледная древесина,"
+      - "которая идёт, пока на неё смотрят."
+    abilities:
+      passive:
+        pale-bark:
+          name: "Бледная кора"
+          effect: RESISTANCE
+          amplifier: 1
+          description:
+            - "Даёт всаднику Сопротивление II."
+        night-roots:
+          name: "Ночные корни"
+          effect: NIGHT_VISION
+          amplifier: 0
+          description:
+            - "Освещает тёмные леса и пещеры."
+    motion:
+      acceleration-time: 0ms
+      deceleration-time: 0ms
+      turn-time: 0ms
+    levels:
+      - {speed: 1.55, handling: 0.9, sprint: 1, price: 240}
+      - {speed: 2.5, handling: 1, sprint: 1.03, price: 360}
+      - {speed: 5.2, handling: 1.28, sprint: 1.12, price: 600}
+    buy-glow: 20000
+    buy-glow-currency: vault
+    appearance: {scale: 1}
+    skins:
+      starlight:
+        name: "Светлый скрипун"
+        item: AMETHYST_SHARD
+        preset: starlight
+        price: 70
+        currency: tokens
+      shadow:
+        name: "Сердце чащи"
+        item: CREAKING_HEART
+        preset: shadow
+        price: 70
+        currency: tokens
+  creeper:
+    type: walking
+    item: CREEPER_SPAWN_EGG
+    entity: CREEPER
+    name: "Крипер"
+    rarity: rare
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Бесшумный зелёный транспорт."
+      - "Фитиль обезврежен системой ARC."
+    abilities:
+      passive:
+        silent-fuse:
+          name: "Тихий фитиль"
+          effect: SPEED
+          amplifier: 0
+          description:
+            - "Даёт всаднику Скорость I."
+        blast-padding:
+          name: "Взрывная прокладка"
+          effect: RESISTANCE
+          amplifier: 0
+          description:
+            - "Снижает входящий урон."
+    levels:
+      - {speed: 1.6, handling: 0.9, sprint: 1, price: 120}
+      - {speed: 2.65, handling: 1, sprint: 1.03, price: 180}
+      - {speed: 5.4, handling: 1.28, sprint: 1.12, price: 300}
+    buy-glow: 15000
+    buy-glow-currency: vault
+    appearance: {scale: 1}
+    skins:
+      starlight:
+        name: "Звёздный крипер"
+        item: AMETHYST_SHARD
+        preset: starlight
+        price: 40
+        currency: tokens
+      shadow:
+        name: "Тихий ужас"
+        item: ECHO_SHARD
+        preset: shadow
+        price: 40
+        currency: tokens
+  elder_guardian:
+    type: swimming
+    item: ELDER_GUARDIAN_SPAWN_EGG
+    entity: ELDER_GUARDIAN
+    name: "Древний страж"
+    rarity: legendary
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Океанский исполин,"
+      - "который превращает глубину в крепость."
+    abilities:
+      upgrades: [water-breathing, night-vision]
+      passive:
+        elder-shell:
+          name: "Древний панцирь"
+          effect: RESISTANCE
+          amplifier: 1
+          description:
+            - "Даёт всаднику Сопротивление II."
+    motion:
+      acceleration-time: 0ms
+      deceleration-time: 0ms
+      turn-time: 0ms
+    levels:
+      - {speed: 0.65, handling: 0.9, sprint: 1, price: 480}
+      - {speed: 1.08, handling: 1, sprint: 1.03, price: 720}
+      - {speed: 2.05, handling: 1.28, sprint: 1.12, price: 1200}
+    buy-glow: 25000
+    buy-glow-currency: vault
+    appearance: {scale: 1}
+    skins:
+      ocean:
+        name: "Владыка монумента"
+        item: NAUTILUS_SHELL
+        preset: ocean
+        price: 120
+        currency: tokens
+      shadow:
+        name: "Страж Бездны"
+        item: ECHO_SHARD
+        preset: shadow
+        price: 120
+        currency: tokens
+  silverfish:
+    type: walking
+    item: SILVERFISH_SPAWN_EGG
+    entity: SILVERFISH
+    name: "Чешуйница"
+    rarity: common
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Каменная заноза на максималках:"
+      - "низкая, быстрая и очень юркая."
+    abilities:
+      passive:
+        stone-skitter:
+          name: "Каменный шорох"
+          effect: SPEED
+          amplifier: 1
+          description:
+            - "Даёт всаднику Скорость II."
+    levels:
+      - {speed: 1.85, handling: 0.95, sprint: 1, price: 30}
+      - {speed: 3, handling: 1.05, sprint: 1.03, price: 45}
+      - {speed: 6, handling: 1.28, sprint: 1.12, price: 75}
+    buy-glow: 5000
+    buy-glow-currency: vault
+    appearance: {scale: 1.2}
+    skins:
+      starlight:
+        name: "Кристальная чешуйница"
+        item: AMETHYST_SHARD
+        preset: starlight
+        price: 15
+        currency: tokens
+      shadow:
+        name: "Глубинная чешуйница"
+        item: ECHO_SHARD
+        preset: shadow
+        price: 15
+        currency: tokens
+  witch:
+    type: walking
+    item: WITCH_SPAWN_EGG
+    entity: WITCH
+    name: "Ведьма"
+    rarity: rare
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Передвижная алхимическая лавка"
+      - "с удачей и медленным лечением."
+    abilities:
+      passive:
+        field-potion:
+          name: "Походное зелье"
+          effect: REGENERATION
+          amplifier: 0
+          description:
+            - "Постепенно восстанавливает здоровье."
+        witch-luck:
+          name: "Ведьмина удача"
+          effect: LUCK
+          amplifier: 0
+          description:
+            - "Даёт всаднику эффект удачи."
+    levels:
+      - {speed: 1.5, handling: 0.9, sprint: 1, price: 120}
+      - {speed: 2.45, handling: 1, sprint: 1.03, price: 180}
+      - {speed: 5.1, handling: 1.28, sprint: 1.12, price: 300}
+    buy-glow: 15000
+    buy-glow-currency: vault
+    appearance: {scale: 1}
+    skins:
+      starlight:
+        name: "Аметистовая ведьма"
+        item: AMETHYST_SHARD
+        preset: starlight
+        price: 40
+        currency: tokens
+      shadow:
+        name: "Ведьма Бездны"
+        item: ECHO_SHARD
+        preset: shadow
+        price: 40
+        currency: tokens
+  camel_husk:
+    type: walking
+    item: CAMEL_HUSK_SPAWN_EGG
+    entity: CAMEL_HUSK
+    passenger-seats: 1
+    name: "Верблюд-кадавр"
+    rarity: epic
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Мёртвый корабль пустыни,"
+      - "которому больше не нужна вода."
+    abilities:
+      passive:
+        dry-hide:
+          name: "Сухая шкура"
+          effect: RESISTANCE
+          amplifier: 0
+          description:
+            - "Даёт всаднику Сопротивление I."
+        desert-pace:
+          name: "Пустынный ход"
+          effect: SPEED
+          amplifier: 0
+          description:
+            - "Даёт всаднику Скорость I."
+    motion:
+      acceleration-time: 0ms
+      deceleration-time: 0ms
+      turn-time: 0ms
+    levels:
+      - {speed: 1.55, handling: 0.9, sprint: 1, price: 240}
+      - {speed: 2.55, handling: 1, sprint: 1.03, price: 360}
+      - {speed: 5.25, handling: 1.28, sprint: 1.12, price: 600}
+    buy-glow: 20000
+    buy-glow-currency: vault
+    appearance:
+      baby: false
+      scale: 1
+      equipment:
+        saddle: SADDLE
+    skins:
+      flame:
+        name: "Песчаная буря"
+        item: BLAZE_POWDER
+        preset: flame
+        price: 70
+        currency: tokens
+      shadow:
+        name: "Мёртвый караван"
+        item: ECHO_SHARD
+        preset: shadow
+        price: 70
+        currency: tokens
+  stray:
+    type: walking
+    item: STRAY_SPAWN_EGG
+    entity: STRAY
+    name: "Зимогор"
+    rarity: uncommon
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Ледяной скелет для снежных дорог"
+      - "и ночных переходов."
+    abilities:
+      upgrades: [night-vision]
+      passive:
+        snow-step:
+          name: "Снежный шаг"
+          effect: SPEED
+          amplifier: 0
+          description:
+            - "Даёт всаднику Скорость I."
+    levels:
+      - {speed: 1.5, handling: 0.9, sprint: 1, price: 60}
+      - {speed: 2.45, handling: 1, sprint: 1.03, price: 90}
+      - {speed: 5.1, handling: 1.28, sprint: 1.12, price: 150}
+    buy-glow: 10000
+    buy-glow-currency: vault
+    appearance: {scale: 1}
+    skins:
+      starlight:
+        name: "Полярный зимогор"
+        item: AMETHYST_SHARD
+        preset: starlight
+        price: 25
+        currency: tokens
+      shadow:
+        name: "Чёрный лёд"
+        item: ECHO_SHARD
+        preset: shadow
+        price: 25
+        currency: tokens
+  parched:
+    type: walking
+    item: PARCHED_SPAWN_EGG
+    entity: PARCHED
+    name: "Пустынник"
+    rarity: uncommon
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Высохший скелет жарких земель,"
+      - "который не боится открытого огня."
+    abilities:
+      passive:
+        desert-fire:
+          name: "Пустынный жар"
+          effect: FIRE_RESISTANCE
+          amplifier: 0
+          description:
+            - "Защищает всадника от огня и лавы."
+        dry-wind:
+          name: "Сухой ветер"
+          effect: SPEED
+          amplifier: 0
+          description:
+            - "Даёт всаднику Скорость I."
+    levels:
+      - {speed: 1.5, handling: 0.9, sprint: 1, price: 60}
+      - {speed: 2.45, handling: 1, sprint: 1.03, price: 90}
+      - {speed: 5.1, handling: 1.28, sprint: 1.12, price: 150}
+    buy-glow: 10000
+    buy-glow-currency: vault
+    appearance: {scale: 1}
+    skins:
+      flame:
+        name: "Красный песок"
+        item: BLAZE_POWDER
+        preset: flame
+        price: 25
+        currency: tokens
+      shadow:
+        name: "Ночная пустыня"
+        item: ECHO_SHARD
+        preset: shadow
+        price: 25
+        currency: tokens
+  zoglin:
+    type: walking
+    item: ZOGLIN_SPAWN_EGG
+    entity: ZOGLIN
+    name: "Зоглин"
+    rarity: epic
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Неживой таран без тормозов,"
+      - "созданный для самого тяжёлого топота."
+    abilities:
+      passive:
+        dead-weight:
+          name: "Мёртвый вес"
+          effect: RESISTANCE
+          amplifier: 0
+          description:
+            - "Даёт всаднику Сопротивление I."
+    behaviors:
+      zoglin-trample:
+        type: trample
+        name: "Мёртвый топот"
+        description:
+          - "Враги под зоглином получают урон"
+          - "во время движения."
+        damage: 3.0
+        maximum-targets: 5
+    motion:
+      acceleration-time: 0ms
+      deceleration-time: 0ms
+      turn-time: 0ms
+    levels:
+      - {speed: 1.6, handling: 0.9, sprint: 1, price: 240}
+      - {speed: 2.6, handling: 1, sprint: 1.03, price: 360}
+      - {speed: 5.4, handling: 1.28, sprint: 1.12, price: 600}
+    buy-glow: 20000
+    buy-glow-currency: vault
+    appearance: {baby: false, scale: 1}
+    skins:
+      soulfire:
+        name: "Зоглин душ"
+        item: SOUL_LANTERN
+        preset: soulfire
+        price: 70
+        currency: tokens
+      shadow:
+        name: "Чёрный зоглин"
+        item: ECHO_SHARD
+        preset: shadow
+        price: 70
+        currency: tokens
+  nautilus:
+    type: swimming
+    item: NAUTILUS_SPAWN_EGG
+    entity: NAUTILUS
+    name: "Наутилус"
+    rarity: rare
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Новый океанский скакун"
+      - "для быстрых подводных экспедиций."
+    abilities:
+      upgrades: [water-breathing, night-vision, dolphins-grace]
+    levels:
+      - {speed: 0.65, handling: 0.9, sprint: 1, price: 120}
+      - {speed: 1.08, handling: 1, sprint: 1.03, price: 180}
+      - {speed: 2.05, handling: 1.28, sprint: 1.12, price: 300}
+    buy-glow: 15000
+    buy-glow-currency: vault
+    appearance: {baby: false, scale: 1}
+    skins:
+      ocean:
+        name: "Океанический наутилус"
+        item: NAUTILUS_SHELL
+        preset: ocean
+        price: 40
+        currency: tokens
+      starlight:
+        name: "Звёздный наутилус"
+        item: AMETHYST_SHARD
+        preset: starlight
+        price: 40
+        currency: tokens
+  zombie_nautilus:
+    type: swimming
+    item: ZOMBIE_NAUTILUS_SPAWN_EGG
+    entity: ZOMBIE_NAUTILUS
+    name: "Зомби-наутилус"
+    rarity: epic
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Утопленная кавалерия,"
+      - "которая не устает в глубинах."
+    abilities:
+      upgrades: [water-breathing, night-vision]
+      passive:
+        drowned-shell:
+          name: "Мёртвый панцирь"
+          effect: RESISTANCE
+          amplifier: 0
+          description:
+            - "Снижает входящий урон."
+    levels:
+      - {speed: 0.65, handling: 0.9, sprint: 1, price: 240}
+      - {speed: 1.08, handling: 1, sprint: 1.03, price: 360}
+      - {speed: 2.05, handling: 1.28, sprint: 1.12, price: 600}
+    buy-glow: 20000
+    buy-glow-currency: vault
+    appearance: {baby: false, scale: 1}
+    skins:
+      ocean:
+        name: "Утопленный наутилус"
+        item: NAUTILUS_SHELL
+        preset: ocean
+        price: 70
+        currency: tokens
+      shadow:
+        name: "Наутилус Бездны"
+        item: ECHO_SHARD
+        preset: shadow
+        price: 70
+        currency: tokens
+  bogged:
+    type: walking
+    item: BOGGED_SPAWN_EGG
+    entity: BOGGED
+    name: "Болотник"
+    rarity: uncommon
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Заросший мхом скелет,"
+      - "который приносит болотную живучесть."
+    abilities:
+      passive:
+        moss-healing:
+          name: "Целебный мох"
+          effect: REGENERATION
+          amplifier: 0
+          description:
+            - "Постепенно восстанавливает здоровье."
+        swamp-luck:
+          name: "Болотное чутьё"
+          effect: LUCK
+          amplifier: 0
+          description:
+            - "Даёт всаднику эффект удачи."
+    levels:
+      - {speed: 1.5, handling: 0.9, sprint: 1, price: 60}
+      - {speed: 2.45, handling: 1, sprint: 1.03, price: 90}
+      - {speed: 5.1, handling: 1.28, sprint: 1.12, price: 150}
+    buy-glow: 10000
+    buy-glow-currency: vault
+    appearance: {scale: 1}
+    skins:
+      ocean:
+        name: "Глубинный болотник"
+        item: NAUTILUS_SHELL
+        preset: ocean
+        price: 25
+        currency: tokens
+      shadow:
+        name: "Тёмный мох"
+        item: ECHO_SHARD
+        preset: shadow
+        price: 25
+        currency: tokens
+  piglin_brute:
+    type: walking
+    item: PIGLIN_BRUTE_SPAWN_EGG
+    entity: PIGLIN_BRUTE
+    name: "Брутальный пиглин"
+    rarity: epic
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Позолоченный тяжеловес"
+      - "для силового прорыва через толпу."
+    abilities:
+      passive:
+        brute-force:
+          name: "Грубая сила"
+          effect: STRENGTH
+          amplifier: 1
+          description:
+            - "Даёт всаднику Силу II."
+        bastion-armor:
+          name: "Броня бастиона"
+          effect: RESISTANCE
+          amplifier: 0
+          description:
+            - "Снижает входящий урон."
+    behaviors:
+      brute-ram:
+        type: ram
+        name: "Штурм бастиона"
+        description:
+          - "Спринт вперёд наносит урон"
+          - "первому враждебному мобу."
+        cooldown: 4s
+        damage: 4.0
+    levels:
+      - {speed: 1.55, handling: 0.9, sprint: 1, price: 240}
+      - {speed: 2.55, handling: 1, sprint: 1.03, price: 360}
+      - {speed: 5.25, handling: 1.28, sprint: 1.12, price: 600}
+    buy-glow: 20000
+    buy-glow-currency: vault
+    appearance: {baby: false, scale: 1}
+    skins:
+      flame:
+        name: "Золотой брут"
+        item: GOLD_BLOCK
+        preset: flame
+        price: 70
+        currency: tokens
+      shadow:
+        name: "Брут Бездны"
+        item: ECHO_SHARD
+        preset: shadow
+        price: 70
+        currency: tokens
+  pillager:
+    type: walking
+    item: PILLAGER_SPAWN_EGG
+    entity: PILLAGER
+    name: "Разбойник"
+    rarity: uncommon
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Быстрый участник рейда"
+      - "с хорошим чутьём на добычу."
+    abilities:
+      passive:
+        raid-scout:
+          name: "Разведчик рейда"
+          effect: SPEED
+          amplifier: 0
+          description:
+            - "Даёт всаднику Скорость I."
+        pillage-luck:
+          name: "Чутьё на добычу"
+          effect: LUCK
+          amplifier: 0
+          description:
+            - "Даёт всаднику эффект удачи."
+    levels:
+      - {speed: 1.55, handling: 0.9, sprint: 1, price: 60}
+      - {speed: 2.55, handling: 1, sprint: 1.03, price: 90}
+      - {speed: 5.25, handling: 1.28, sprint: 1.12, price: 150}
+    buy-glow: 10000
+    buy-glow-currency: vault
+    appearance: {scale: 1}
+    skins:
+      starlight:
+        name: "Звёздный разбойник"
+        item: AMETHYST_SHARD
+        preset: starlight
+        price: 25
+        currency: tokens
+      shadow:
+        name: "Ночной дозор"
+        item: ECHO_SHARD
+        preset: shadow
+        price: 25
+        currency: tokens
+  evoker:
+    type: walking
+    item: EVOKER_SPAWN_EGG
+    entity: EVOKER
+    name: "Заклинатель"
+    rarity: epic
+    acquisition: "у Гектора во дворе маунтов на спавне"
+    currency: tokens
+    description:
+      - "Маг рейда, превращённый"
+      - "в мобильный талисман всадника."
+    abilities:
+      passive:
+        totem-pulse:
+          name: "Импульс тотема"
+          effect: REGENERATION
+          amplifier: 0
+          description:
+            - "Постепенно восстанавливает здоровье."
+        arcane-luck:
+          name: "Магическая удача"
+          effect: LUCK
+          amplifier: 1
+          description:
+            - "Даёт всаднику Удачу II."
+    levels:
+      - {speed: 1.5, handling: 0.9, sprint: 1, price: 240}
+      - {speed: 2.45, handling: 1, sprint: 1.03, price: 360}
+      - {speed: 5.1, handling: 1.28, sprint: 1.12, price: 600}
+    buy-glow: 20000
+    buy-glow-currency: vault
+    appearance: {scale: 1}
+    skins:
+      starlight:
+        name: "Аметистовый заклинатель"
+        item: AMETHYST_SHARD
+        preset: starlight
+        price: 70
+        currency: tokens
+      shadow:
+        name: "Заклинатель Бездны"
+        item: ECHO_SHARD
+        preset: shadow
+        price: 70
+        currency: tokens
