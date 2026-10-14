@@ -9,6 +9,9 @@ dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         mavenCentral()
+        maven("https://maven.citizensnpcs.co/repo") {
+            content { includeGroup("net.citizensnpcs") }
+        }
         maven("https://repo.papermc.io/repository/maven-public/") {
             content {
                 includeGroup("io.papermc.paper")

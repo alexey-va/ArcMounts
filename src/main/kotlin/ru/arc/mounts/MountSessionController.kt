@@ -131,12 +131,12 @@ class MountSessionController internal constructor(
     private val visualFlight = MountVisualFlight(plugin)
     private val sessionsByPlayer = ConcurrentHashMap<UUID, MountSession>()
     private val playerByEntity = ConcurrentHashMap<UUID, UUID>()
-    private val ownerKey = NamespacedKey(plugin, "mount_owner")
-    private val mountIdKey = NamespacedKey(plugin, "mount_id")
-    private val spawnTokenKey = NamespacedKey(plugin, "mount_spawn_token")
+    private val ownerKey = NamespacedKey("arc", "mount_owner")
+    private val mountIdKey = NamespacedKey("arc", "mount_id")
+    private val spawnTokenKey = NamespacedKey("arc", "mount_spawn_token")
     private val airborneMiningModifier =
         AttributeModifier(
-            NamespacedKey(plugin, "mount_airborne_mining"),
+            NamespacedKey("arc", "mount_airborne_mining"),
             airborneMiningCompensationAmount(),
             AttributeModifier.Operation.MULTIPLY_SCALAR_1,
         )

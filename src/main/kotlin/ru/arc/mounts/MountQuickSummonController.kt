@@ -31,7 +31,7 @@ class MountQuickSummonController(
     private val configProvider: () -> MountModuleConfig,
     private val summons: MountSummonService,
 ) : Listener {
-    private val whistleKey = NamespacedKey(plugin, "mount_whistle")
+    private val whistleKey = NamespacedKey("arc", "mount_whistle")
     @Volatile private var active = false
 
     fun start() {

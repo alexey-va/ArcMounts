@@ -1204,9 +1204,13 @@ class MountGuiController(
     private val TUNING_MENU_BACK_SLOT get() = layoutSlot(MOUNT_TUNING, "back")
     private val TUNING_MENU_RIDER_VIEW_SLOT get() = layoutSlot(MOUNT_TUNING, "rider-view")
     private val SKIN_CONTENT_SLOTS get() = layoutRegion(MOUNT_SKINS, SKINS_REGION)
+    private val SKINS_PREVIOUS_SLOT get() = layoutSlot(MOUNT_SKINS, "previous")
+    private val SKINS_NEXT_SLOT get() = layoutSlot(MOUNT_SKINS, "next")
+    private val SKINS_BACK_SLOT get() = layoutSlot(MOUNT_SKINS, "back")
 
     private val CONFIRM_INFO_SLOT get() = layoutSlot(MOUNT_CONFIRM, "info")
     private val CONFIRM_ACCEPT_SLOT get() = layoutSlot(MOUNT_CONFIRM, "accept")
+    private val CONFIRM_CANCEL_SLOT get() = layoutSlot(MOUNT_CONFIRM, "cancel")
 
     private fun fill(inventory: Inventory, fallbackMaterial: Material = Material.GRAY_STAINED_GLASS_PANE, full: Boolean = false) {
         val background = styledItem(MountGuiItemRole.BACKGROUND, fallbackMaterial, " ", emptyList(), hideTooltip = true)

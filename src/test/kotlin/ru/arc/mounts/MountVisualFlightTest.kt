@@ -180,5 +180,5 @@ class MountVisualFlightTest : TestBase() {
         backingPlayer.persistentDataContainer.keys.contains(recoveryKey()) shouldBe false
     }
 
-    private fun recoveryKey() = NamespacedKey(plugin, MountVisualFlight.RECOVERY_KEY)
+    private fun recoveryKey() = NamespacedKey("arc", MountVisualFlight.RECOVERY_KEY)
 }

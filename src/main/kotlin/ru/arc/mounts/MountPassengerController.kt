@@ -68,10 +68,10 @@ internal class MountPassengerController(
     private val pendingCarrierSpawns = hashMapOf<UUID, Ride>()
     private var liveSettings: MountPassengerSettings? = null
     private var carrierPoses: MountCarrierPosePackets? = null
-    private val ownerKey = NamespacedKey(plugin, "mount_owner")
-    private val mountIdKey = NamespacedKey(plugin, "mount_id")
-    private val spawnTokenKey = NamespacedKey(plugin, "mount_spawn_token")
-    private val seatKey = NamespacedKey(plugin, "mount_passenger_seat")
+    private val ownerKey = NamespacedKey("arc", "mount_owner")
+    private val mountIdKey = NamespacedKey("arc", "mount_id")
+    private val spawnTokenKey = NamespacedKey("arc", "mount_spawn_token")
+    private val seatKey = NamespacedKey("arc", "mount_passenger_seat")
 
     fun start() {
         val config = configProvider()

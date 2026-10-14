@@ -5,8 +5,8 @@ import org.bukkit.inventory.ItemStack
 import org.bukkit.plugin.ServicePriority
 import org.bukkit.plugin.java.JavaPlugin
 import ru.arc.config.ConfigManager
-import ru.arc.core.BukkitTaskScheduler
 import ru.arc.core.PaperArcRuntime
+import ru.arc.core.Tasks
 import ru.arc.logging.ArcLogging
 import ru.arc.logging.LoggingConfigSource
 import ru.arc.logging.Slf4jLoggingPlatform
@@ -34,7 +34,8 @@ class ArcMountsPlugin : JavaPlugin(), ArcMountService {
         )
 
         PaperArcRuntime.installScheduling(this)
-        val local = PaperPluginRuntime(this, "arc-mounts", BukkitTaskScheduler(this))
+        val scheduler = Tasks.scheduler
+        val local = PaperPluginRuntime(this, "arc-mounts", scheduler)
         runtime = local
         local.start("host" to "ARC")
         local.registerHealth("mounts") {
@@ -55,7 +56,7 @@ class ArcMountsPlugin : JavaPlugin(), ArcMountService {
         val menuRuntime = local.own(
             PaperMenuRuntime(
                 this,
-                local.tasks,
+                scheduler,
                 MountMenuConfiguration.load(host.dataPath(), transferConfig.detailSlot),
             ),
         )
@@ -63,7 +64,7 @@ class ArcMountsPlugin : JavaPlugin(), ArcMountService {
         val loaded = MountModule(
             plugin = this,
             hostConfiguration = host,
-            scheduler = local.tasks,
+            scheduler = scheduler,
             visibilityProvider = { server.servicesManager.load(ArcMountVisibility::class.java) },
             metrics = metrics,
             telemetry = MountTelemetry(this),

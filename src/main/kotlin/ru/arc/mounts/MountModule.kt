@@ -134,7 +134,7 @@ internal class MountModule(
                 configProvider = ::requiredConfig,
                 allowedMountIds = loadedCatalog.all.mapTo(hashSetOf(), MountDefinition::id),
                 message = { player, path, fallback ->
-                    player.sendMessage(requiredConfig().messageComponent(path, fallback, player.locale()))
+                    player.sendMessage(requiredConfig().messageComponent(path, fallback, player.locale().toLanguageTag()))
                 },
                 onStateChanged = ::publishMetrics,
                 setRiderMountHidden = { player, entity, hidden -> visibility?.setEntityInvisibleFor(entity, player, hidden) },

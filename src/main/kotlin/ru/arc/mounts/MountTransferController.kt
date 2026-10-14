@@ -49,7 +49,7 @@ class MountTransferController(
     dataPath: Path,
 ) : Listener, AutoCloseable {
     private val scope = LifecycleTaskScope(scheduler)
-    private val key = NamespacedKey(plugin, "mount_certificate")
+    private val key = NamespacedKey("arc", "mount_certificate")
     private val store = FileMountTransferStore(dataPath)
     private val flow = MountTransferFlow(store, ownership, ledger, { scope.runSync(it) }, otherBusy)
     val detailSlot get() = config.detailSlot

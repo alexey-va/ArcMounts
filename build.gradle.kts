@@ -54,6 +54,9 @@ dependencies {
     compileOnly(project(":arc-mounts-api"))
     compileOnly("ru.ruscrafting.arc:arc-core-paper-api:2.7.22")
     compileOnly("io.papermc.paper:paper-api:26.1.2.build.+")
+    compileOnly("net.citizensnpcs:citizens-main:2.0.42-SNAPSHOT") {
+        exclude(group = "*", module = "*")
+    }
     compileOnly("net.luckperms:api:5.4")
     compileOnly("com.github.retrooper:packetevents-spigot:2.12.1") {
         exclude(group = "io.netty")
@@ -67,6 +70,9 @@ dependencies {
     testImplementation("io.kotest:kotest-runner-junit5:6.0.7")
     testImplementation("io.kotest:kotest-assertions-core:6.0.7")
     testImplementation("io.mockk:mockk:1.14.7")
+    testImplementation("net.citizensnpcs:citizens-main:2.0.42-SNAPSHOT") {
+        exclude(group = "*", module = "*")
+    }
     testImplementation("net.luckperms:api:5.4")
     testImplementation("com.github.retrooper:packetevents-spigot:2.12.1") {
         exclude(group = "io.netty")

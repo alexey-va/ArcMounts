@@ -56,7 +56,7 @@ class MountPlayerFlightLifecycleTest : TestBase() {
         isMountControlledBy(pilot, body, MountControl.PLAYER_FLIGHT) shouldBe true
         pilot.allowFlight shouldBe true
         pilot.isFlying shouldBe true
-        val recoveryKey = NamespacedKey(plugin, MountVisualFlight.RECOVERY_KEY)
+        val recoveryKey = NamespacedKey("arc", MountVisualFlight.RECOVERY_KEY)
         pilot.persistentDataContainer.keys.contains(recoveryKey) shouldBe true
 
         scheduled.single().first shouldBe 1L
@@ -130,7 +130,7 @@ class MountPlayerFlightLifecycleTest : TestBase() {
         pilot.isFlying shouldBe originalIsFlying
         pilot.flySpeed shouldBe originalFlySpeed
         pilot.persistentDataContainer.keys.contains(
-            NamespacedKey(plugin, MountVisualFlight.RECOVERY_KEY),
+            NamespacedKey("arc", MountVisualFlight.RECOVERY_KEY),
         ) shouldBe false
     }
 

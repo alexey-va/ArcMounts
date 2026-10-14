@@ -14,7 +14,7 @@ private fun isValidMountFlySpeed(value: Float): Boolean = value.isFinite() && va
 
 /** Owns only the temporary native-flight fields used by a visual flying mount. */
 internal class MountVisualFlight(plugin: JavaPlugin) {
-    private val recoveryKey = NamespacedKey(plugin, RECOVERY_KEY)
+    private val recoveryKey = NamespacedKey("arc", RECOVERY_KEY)
     private val logger = plugin.logger
 
     fun begin(player: Player, flySpeed: Float) {
