@@ -435,6 +435,8 @@ class MountSessionController internal constructor(
             .onFailure { warn("Unable to restore mount flight for {}: {}", player.name, it.javaClass.simpleName) }
     }
 
+    // Keep the existing Bukkit ground-state predicate for gameplay compatibility.
+    @Suppress("DEPRECATION")
     private fun updateMiningCompensation(player: Player, session: MountSession) {
         val enabled = shouldCompensateMountMining(
             session.definition.movement, session.definition.control, player.isOnGround,
@@ -1170,7 +1172,7 @@ internal fun configureWalkingStepHeight(entity: LivingEntity, stepHeight: Double
 }
 
 internal fun nativeWalkingHorse(entity: LivingEntity, movement: MountMovement): AbstractHorse? =
-    if (movement == MountMovement.WALKING && (entity is Horse || entity is Camel)) entity as AbstractHorse else null
+    if (movement == MountMovement.WALKING && (entity is Horse || entity is Camel)) entity else null
 
 internal fun configureNativeHorse(horse: AbstractHorse, player: Player) {
     horse.setAware(true)

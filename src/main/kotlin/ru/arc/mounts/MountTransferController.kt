@@ -18,6 +18,7 @@ import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.inventory.Inventory
 import org.bukkit.inventory.InventoryHolder
 import org.bukkit.inventory.ItemStack
+import org.bukkit.inventory.meta.ItemMeta
 import org.bukkit.persistence.PersistentDataType
 import org.bukkit.plugin.java.JavaPlugin
 import ru.arc.core.LifecycleTaskScope
@@ -27,6 +28,12 @@ import ru.arc.util.Logging.warn
 import ru.arc.util.TextUtils
 import java.util.UUID
 import java.nio.file.Path
+
+// Mounts configuration stores the legacy integer CustomModelData field.
+@Suppress("DEPRECATION")
+private fun ItemMeta.setMountCustomModelData(value: Int) {
+    setCustomModelData(value)
+}
 
 private class MountPackingMenu(val mountId: String, val back: (() -> Unit)? = null) : InventoryHolder {
     lateinit var contents: Inventory
@@ -87,7 +94,7 @@ class MountTransferController(
         holder.contents = inventory
         val background = backgroundStyle()
         val filler = item(background?.material ?: Material.GRAY_STAINED_GLASS_PANE, " ", emptyList())
-        filler.editMeta { meta -> background?.customModelData?.let { meta.setCustomModelData(it) } }
+        filler.editMeta { meta -> background?.customModelData?.let { meta.setMountCustomModelData(it) } }
         for (slot in 0 until inventory.size) inventory.setItem(slot, filler)
         val profileSnapshot = profile?.invoke(player.uniqueId, mount)
         val levelLine = if (profileSnapshot != null) {
@@ -149,8 +156,8 @@ class MountTransferController(
         val player = event.player as? Player ?: return
         scope.runLater(1) {
             if (!player.isOnline) return@runLater
-            val openType = player.openInventory.topInventory?.type
-            if (openType == null || openType == org.bukkit.event.inventory.InventoryType.CRAFTING) holder.back.invoke()
+            val openType = player.openInventory.topInventory.type
+            if (openType == org.bukkit.event.inventory.InventoryType.CRAFTING) holder.back.invoke()
         }
     }
 

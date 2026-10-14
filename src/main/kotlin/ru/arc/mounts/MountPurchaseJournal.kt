@@ -89,6 +89,12 @@ data class MountPurchaseJournalRecord(
     }
 }
 
+/** Gson can bypass Kotlin's non-null field contract when reading older snapshots. */
+private fun persistedCurrencyOrDefault(value: Any?): String {
+    if (value == null) return "vault"
+    return value as? String ?: error("Invalid mount purchase currency value")
+}
+
 data class MountPurchaseJournalSnapshot(
     val schemaVersion: Int = CURRENT_SCHEMA,
     val records: List<MountPurchaseJournalRecord> = emptyList(),
@@ -177,7 +183,7 @@ class FileMountPurchaseJournal(
             ?: return
         snapshot.records
             // Gson bypasses Kotlin constructor defaults when a historical field is absent.
-            .map { it.copy(currency = it.currency ?: "vault") }
+            .map { record -> record.copy(currency = persistedCurrencyOrDefault(record.currency)) }
             .map(MountPurchaseJournalRecord::validated)
             .forEach { record ->
             require(recordsById.put(record.transactionId, record) == null) { "Duplicate mount purchase transaction id" }
@@ -198,7 +204,7 @@ class FileMountPurchaseJournal(
         require(snapshot.records.size <= MAX_RECORDS) { "Mount purchase journal exceeds hard record limit" }
         val ids = HashSet<String>()
         snapshot.records.forEach { record ->
-            record.copy(currency = record.currency ?: "vault").validated()
+            record.copy(currency = persistedCurrencyOrDefault(record.currency)).validated()
             require(ids.add(record.transactionId)) { "Duplicate mount purchase transaction id" }
         }
     }

@@ -686,8 +686,8 @@ class MountGuiController(
         val parent = holder.parent ?: return
         scheduler.runLater(1) {
             if (!active || !player.isOnline) return@runLater
-            val openType = player.openInventory.topInventory?.type
-            if (openType != null && openType != org.bukkit.event.inventory.InventoryType.CRAFTING) return@runLater
+            val openType = player.openInventory.topInventory.type
+            if (openType != org.bukkit.event.inventory.InventoryType.CRAFTING) return@runLater
             when (parent.screen) {
                 MountScreen.LIST,
                 MountScreen.DETAIL,
