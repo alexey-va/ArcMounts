@@ -6,7 +6,7 @@ providers; this plugin consumes those services and owns mount gameplay.
 
 The two immutable Maven coordinates have independent versions:
 
-- Runtime plugin: `ru.ruscrafting:ArcMounts:0.1.3`
+- Runtime plugin: `ru.ruscrafting:ArcMounts:0.1.4`
 - Java API: `ru.ruscrafting.arc:arc-mounts-api:0.1.0`
 
 ARC shades the API at runtime. Add-ons compile against the API and must not
@@ -33,4 +33,4 @@ the plugin JAR/POM and the API JAR, sources JAR, POM, and Gradle module metadata
 to the public RusCrafting Maven repository. There is no GitHub Release step.
 
 The local `arcCoreDir` Gradle property can point to an `arc-core` checkout for
-composite development. CI uses the immutable `2.7.28` Maven release.
+composite development. CI uses the immutable `2.7.29` Maven release.
