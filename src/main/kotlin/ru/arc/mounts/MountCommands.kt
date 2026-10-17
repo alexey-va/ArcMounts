@@ -358,20 +358,20 @@ class MountCommand(
         alias: String,
         args: Array<out String>,
     ): List<String> {
-        if (args.isEmpty()) return emptyList()
+        if (args.isEmpty() || !sender.hasPermission("arc.mounts.use")) return emptyList()
         if (args.size == 1) {
             return buildList {
                 add("help")
-                add("menu")
-                addAll(listOf("shop", "owned", "upgrades", "trade", "view", "pack"))
+                if (sender is Player) addAll(listOf("menu", "shop", "owned", "upgrades", "trade", "view", "pack"))
                 if (sender.hasPermission(ADMIN_PERMISSION)) add("admin")
             }.matching(args[0])
         }
-        if (args.size == 2 && args[0].lowercase(Locale.ROOT) in listOf("view", "pack")) return catalog().all.map { it.id }.matching(args[1])
+        if (args.size == 2 && sender is Player && args[0].lowercase(Locale.ROOT) in listOf("view", "pack")) return catalog().all.map { it.id }.matching(args[1])
         if (!args[0].equals("admin", ignoreCase = true) || !sender.hasPermission(ADMIN_PERMISSION)) return emptyList()
-        if (args.size == 2) return listOf("summon", "grant-all", "revoke-all", "grant", "revoke").matching(args[1])
+        if (args.size == 2) return (listOf("grant-all", "revoke-all", "grant", "revoke") +
+            if (sender is Player) listOf("summon") else emptyList()).matching(args[1])
         return when (args[1].lowercase(Locale.ROOT)) {
-            "summon" -> completeSummon(args)
+            "summon" -> if (sender is Player) completeSummon(args) else emptyList()
             "grant-all" -> if (args.size == 3) sender.server.onlinePlayers.map(Player::getName).matching(args[2]) else emptyList()
             "revoke-all" -> if (args.size == 3) sender.server.onlinePlayers.map(Player::getName).matching(args[2]) else emptyList()
             "grant", "revoke" -> completeMutation(sender, args)
@@ -384,24 +384,25 @@ class MountCommand(
             3 -> catalog().all.map(MountDefinition::id).matching(args[2])
             4 -> {
                 val mount = catalog()[args[2].lowercase(Locale.ROOT)]
-                (1..(mount?.maxLevel ?: 3)).map(Int::toString).matching(args[3])
+                (1..(mount?.maxLevel ?: 0)).map(Int::toString).matching(args[3])
             }
             5 -> {
                 val mount = catalog()[args[2].lowercase(Locale.ROOT)]
-                (listOf(MountDefinition.DEFAULT_SKIN_ID) + mount?.skins.orEmpty().map(MountSkinDefinition::id)).matching(args[4])
+                if (mount == null) emptyList() else (listOf(MountDefinition.DEFAULT_SKIN_ID) + mount.skins.map(MountSkinDefinition::id)).matching(args[4])
             }
             else -> emptyList()
         }
 
-    private fun completeMutation(sender: CommandSender, args: Array<out String>): List<String> =
-        when (args.size) {
+    private fun completeMutation(sender: CommandSender, args: Array<out String>): List<String> {
+        if (args.size > 3 && args[2].lowercase(Locale.ROOT) !in ADMIN_KINDS) return emptyList()
+        return when (args.size) {
             3 -> ADMIN_KINDS.matching(args[2])
             4 -> sender.server.onlinePlayers.map(Player::getName).matching(args[3])
             5 -> catalog().all.map(MountDefinition::id).matching(args[4])
             6 -> {
                 val mount = catalog()[args[4].lowercase(Locale.ROOT)]
                 when (args[2].lowercase(Locale.ROOT)) {
-                    "level" -> (1..(mount?.maxLevel ?: 3)).map(Int::toString).matching(args[5])
+                    "level" -> (1..(mount?.maxLevel ?: 0)).map(Int::toString).matching(args[5])
                     "skin" -> mount?.skins.orEmpty().map(MountSkinDefinition::id).matching(args[5])
                     "ability" -> mount?.abilities?.upgrades.orEmpty().map(MountAbilityUpgradeDefinition::id).matching(args[5])
                     "size" ->
@@ -414,6 +415,7 @@ class MountCommand(
             }
             else -> emptyList()
         }
+    }
 
     private data class MountAdminMutation(
         val successLabel: String,

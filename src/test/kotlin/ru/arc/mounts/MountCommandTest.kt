@@ -197,6 +197,25 @@ class MountCommandTest : StringSpec({
         verify(exactly = 1) { fixture.ownership.revokeSize(fixture.playerId, specialMount, special) }
     }
 
+    "completion rejects unknown branches extra arguments and missing use permission" {
+        val fixture = commandFixture(catalog, admin = true)
+        listOf(
+            arrayOf("admin", "grant", "unknown", ""),
+            arrayOf("admin", "grant", "level", "Rider", "missing", ""),
+            arrayOf("admin", "summon", "missing", ""),
+            arrayOf("admin", "summon", "missing", "1", ""),
+            arrayOf("admin", "grant", "glow", "Rider", "bee", ""),
+            arrayOf("admin", "grant-all", "Rider", ""),
+            arrayOf("shop", ""),
+            arrayOf("unknown", ""),
+        ).forEach { fixture.command.onTabComplete(fixture.player, fixture.bukkitCommand, "mount", it) shouldBe emptyList() }
+        fixture.command.onTabComplete(fixture.player, fixture.bukkitCommand, "mount", arrayOf("ADMIN", "grant", "LeVeL", "ri")) shouldBe listOf("Rider")
+        fixture.command.onTabComplete(fixture.console, fixture.bukkitCommand, "mount", arrayOf("admin", "su")) shouldBe emptyList()
+        every { fixture.player.hasPermission("arc.mounts.use") } returns false
+        fixture.command.onTabComplete(fixture.player, fixture.bukkitCommand, "mount", arrayOf("")) shouldBe emptyList()
+        fixture.command.onTabComplete(fixture.player, fixture.bukkitCommand, "mount", arrayOf("admin", "grant-all", "")) shouldBe emptyList()
+    }
+
     "admin grant-all persists the complete catalog before reporting success" {
         val secondMount = testMount().copy(id = "bat", displayName = "Летучая мышь")
         val mounts = MountCatalog(listOf(mount, secondMount))
@@ -309,6 +328,7 @@ private fun commandFixture(catalog: MountCatalog, admin: Boolean = false): Mount
     }
     val console = mockk<CommandSender>(relaxed = true) {
         every { hasPermission("arc.mounts.admin") } returns true
+        every { hasPermission("arc.mounts.use") } returns true
         every { this@mockk.server } returns server
     }
     every { server.getPlayerExact("Rider") } returns player
