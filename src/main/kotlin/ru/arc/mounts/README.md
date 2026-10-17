@@ -12,6 +12,9 @@ Native production replacement for `Denizen/scripts/activities/rideable_mobs.dsc`
   Space to jump. Horses retain native ridden physics so gravity and terrain
   transitions remain correct; hold and release Space for their charged jump.
   Ordinary flying and swimming mounts use WASD, Space to ascend and Shift to descend.
+  Swimming mounts can breach the surface with a short jump. Ascent receives one
+  exit impulse, then gravity and air drag carry the mount back down; holding Space
+  in the air cannot sustain flight. Water controls resume immediately on re-entry.
   Skycruiser uses ordinary player flight, with Space ascent and Shift descent.
   Its Phantom is the player's native passenger, a winged companion above the
   pilot. There is no Happy Ghast carrier or teleported follower, and no guest seats.
@@ -74,9 +77,10 @@ Native production replacement for `Denizen/scripts/activities/rideable_mobs.dsc`
   mount on the next tick. Rider suffocation inside a block remains cancelled as
   a mount hitbox safety measure.
 - Rider death, logout, teleport, world change, expiry, idle timeout, invalid
-  state, world-border/height escape, or genuinely leaving water removes the
-  temporary entity. Kelp, seagrass and bubble columns remain valid aquatic
-  environments.
+  state or world-border/height escape removes the temporary entity. Swimming
+  mounts are removed after five continuous seconds outside water; re-entry
+  resets that grace period. Kelp, seagrass and bubble columns remain valid
+  aquatic environments, and initial summoning still requires water.
 - A short summon cooldown protects against duplicate entities. ARC-controlled
   vehicles have a server velocity cap; native flight uses a bounded nominal
   speed attribute rather than a per-tick velocity clamp.

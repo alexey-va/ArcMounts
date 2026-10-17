@@ -105,6 +105,8 @@ private data class MountSession(
     var ticks: Long = 0L,
     var riderMountHidden: Boolean = false,
     var motionState: MountMotionState = MountMotionState(),
+    var leftWaterAtMillis: Long? = null,
+    var aquaticAirPosition: Vector? = null,
     var ramState: MountRamState = MountRamState(),
     var airborneMiningCompensated: Boolean = false,
     var previousBoundingBox: BoundingBox? = null,
@@ -622,13 +624,23 @@ class MountSessionController internal constructor(
         })
     }
 
-    private fun tick() {
-        val now = System.currentTimeMillis()
+    private fun tick() = tick(System.currentTimeMillis())
+
+    private fun tick(now: Long) {
         sessionsByPlayer.values.toList().forEach { session ->
             val player = plugin.server.getPlayer(session.playerId)
             val entity = plugin.server.getEntity(session.entityId) as? LivingEntity
             val visualEntity = session.visualEntityId?.let { plugin.server.getEntity(it) as? LivingEntity }
             val location = if (session.definition.control == MountControl.PLAYER_FLIGHT) player?.location else entity?.location
+            val inWater = session.definition.movement == MountMovement.SWIMMING && entity != null &&
+                isAquaticEnvironment(
+                    entity.isInWater || entity.location.block.type == org.bukkit.Material.BUBBLE_COLUMN,
+                    entity.location.block.isLiquid,
+                )
+            if (inWater) {
+                session.leftWaterAtMillis = null
+                session.aquaticAirPosition = null
+            }
             when {
                 player == null || !player.isOnline -> remove(session.playerId, MountRemovalReason.QUIT)
                 entity == null || !entity.isValid || !isMountControlledBy(player, entity, session.definition.control) -> remove(session.playerId, MountRemovalReason.INVALID)
@@ -648,11 +660,7 @@ class MountSessionController internal constructor(
                 location != null && !location.world.worldBorder.isInside(location) -> {
                     remove(session.playerId, MountRemovalReason.WORLD_BORDER)
                 }
-                session.definition.movement == MountMovement.SWIMMING &&
-                    !isAquaticEnvironment(
-                        entity.isInWater || entity.location.block.type == org.bukkit.Material.BUBBLE_COLUMN,
-                        entity.location.block.isLiquid,
-                    ) -> {
+                session.leftWaterAtMillis?.let { now - it >= AQUATIC_DRY_GRACE_MILLIS } == true -> {
                     remove(session.playerId, MountRemovalReason.LEFT_WATER)
                 }
                 else -> {
@@ -687,7 +695,7 @@ class MountSessionController internal constructor(
                         emitTrail(entity, session)
                         return@forEach
                     }
-                    val maximumSpeed = move(player, entity, session, now)
+                    val maximumSpeed = move(player, entity, session, now, inWater)
                     if (!passengers.reconcileRide(session.entityId, session.hasRiderFireProtection())) {
                         remove(session.playerId, MountRemovalReason.INVALID)
                         return@forEach
@@ -746,9 +754,13 @@ class MountSessionController internal constructor(
             .coerceAtMost(config.maximumSpeedBlocksPerTick)
     }
 
-    private fun move(player: Player, entity: LivingEntity, session: MountSession, nowMillis: Long): Double {
+    private fun move(player: Player, entity: LivingEntity, session: MountSession, nowMillis: Long, inWater: Boolean): Double {
         val config = configProvider()
         val maximumSpeed = maximumSpeed(session, nowMillis)
+        if (session.definition.movement == MountMovement.SWIMMING && !inWater) {
+            moveOutsideWater(entity, session, nowMillis, config.maximumSpeedBlocksPerTick, config.maximumVerticalSpeed)
+            return maximumSpeed
+        }
         if (session.definition.control == MountControl.NATIVE_FLIGHT) {
             configureNativeHappyGhastMotion(entity as HappyGhast, maximumSpeed)
             val velocity = entity.velocity
@@ -822,6 +834,46 @@ class MountSessionController internal constructor(
         val targetYaw = MountMotion.facingYaw(controlledVelocity, entity.yaw)
         entity.setRotation(targetYaw, 0.0f)
         return maximumSpeed
+    }
+
+    private fun moveOutsideWater(
+        entity: LivingEntity,
+        session: MountSession,
+        nowMillis: Long,
+        speedLimit: Double,
+        verticalLimit: Double,
+    ) {
+        val position = entity.location.toVector()
+        val previous = session.motionState.velocity
+        val previousPosition = session.aquaticAirPosition
+        val velocity = if (session.leftWaterAtMillis == null) {
+            session.leftWaterAtMillis = nowMillis
+            val current = entity.velocity
+            if (!entity.isOnGround && previous.y > 0.0 && current.y > 0.0) {
+                // A single breach impulse also clears the surface at the first catalog level.
+                val horizontal = previous.normalizedHorizontal() * maxOf(previous.horizontalLength, 0.45)
+                MotionVector(horizontal.x, maxOf(current.y, 0.55), horizontal.z)
+            } else {
+                MotionVector(current.x, minOf(current.y, 0.0), current.z)
+            }
+        } else {
+            val travelled = position.clone().subtract(checkNotNull(previousPosition))
+            // Squid clears native X/Z after travel. Actual displacement still exposes collisions.
+            fun unclipped(speed: Double, distance: Double): Double =
+                if (kotlin.math.abs(distance) + 1.0e-6 < kotlin.math.abs(speed)) 0.0 else speed
+            MotionVector(
+                unclipped(previous.x, travelled.x) * 0.91,
+                (unclipped(previous.y, travelled.y) - 0.08) * 0.98,
+                unclipped(previous.z, travelled.z) * 0.91,
+            )
+        }.let { it.copy(y = it.y.coerceIn(-verticalLimit, verticalLimit)) }
+            .let { if (it.length > speedLimit) it.normalized() * speedLimit else it }
+        // Keep native gravity disabled: this one curve avoids species-specific drag and double gravity.
+        entity.velocity = constrainPhasingVelocity(entity, velocity).toBukkit()
+        entity.fallDistance = 0.0f
+        entity.setRotation(MountMotion.facingYaw(velocity, entity.yaw), 0.0f)
+        session.motionState = MountMotionState(velocity.normalized(), velocity.length)
+        session.aquaticAirPosition = position
     }
 
     private fun emitTrail(entity: LivingEntity, session: MountSession) {
@@ -1099,6 +1151,7 @@ class MountSessionController internal constructor(
     companion object {
         private const val ABILITY_REFRESH_TICKS = 20L
         private const val ABILITY_EFFECT_DURATION_TICKS = 280
+        private const val AQUATIC_DRY_GRACE_MILLIS = 5_000L
     }
 
     private fun canApplyScale(
