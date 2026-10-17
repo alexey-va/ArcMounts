@@ -11,6 +11,13 @@ import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import org.bukkit.plugin.java.JavaPlugin
 import ru.arc.core.TaskScheduler
+import ru.arc.core.BoundedAsyncExecutor
+import ru.arc.core.LifecycleTaskScope
+import ru.arc.core.BudgetedTaskQueue
+import ru.arc.config.ConfigManager
+import ru.arc.paper.api.ArcRedisService
+import ru.arc.onetime.OneTimeUseLedger
+import java.util.concurrent.CancellationException
 import ru.arc.paper.menu.PaperMenuRuntime
 import ru.arc.paper.redis.PaperRedisClient
 import ru.arc.mounts.api.ArcMountConfiguration
@@ -23,6 +30,7 @@ import ru.arc.util.TextUtils
 import java.util.Locale
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ConcurrentHashMap
 
 internal class MountModule(
     private val plugin: JavaPlugin,
@@ -32,6 +40,7 @@ internal class MountModule(
     private val metrics: MountTechnicalMetrics,
     private val telemetry: MountTelemetry,
     private val menuRuntime: PaperMenuRuntime,
+    private val io: BoundedAsyncExecutor,
 ) : AutoCloseable {
 
     @Volatile private var config: MountModuleConfig? = null
@@ -46,29 +55,143 @@ internal class MountModule(
     private var careBoosts: MountCareBoostService? = null
     private var careBoostHydration: MountCareBoostHydrationListener? = null
     private var redisClient: PaperRedisClient? = null
-    private var redisGeneration = Long.MIN_VALUE
+    private val dataPath = hostConfiguration.dataPath()
+    private val nativeScope = LifecycleTaskScope(scheduler)
+    private var nativeQueue = BudgetedTaskQueue(nativeScope)
+    @Volatile private var generation = 0L
+    @Volatile private var closed = false
+    private var transferConfig: MountTransferConfig? = null
+    // A cold acquire racing disable remains owned until the worker terminal drain.
+    private val storageResources = ConcurrentHashMap.newKeySet<AutoCloseable>()
     private val rewardGrant = MountRewardGrant()
 
     internal fun currentBackgroundStyle(): MountGuiItemStyle? = config?.guiStyle(MountGuiItemRole.BACKGROUND)
 
-    fun init() {
+    fun init(): CompletableFuture<Unit> {
         bindUnavailableCommands()
-        start(MountModuleConfig.load(hostConfiguration.dataPath()))
+        return prepareAndStart(reload = false)
     }
 
-    fun reload() {
+    fun reload(): CompletableFuture<Unit> {
         shutdownRuntime()
-        val transferConfig = MountTransferConfig.load(hostConfiguration.dataPath())
-        menuRuntime.replace(MountMenuConfiguration.load(hostConfiguration.dataPath(), transferConfig.detailSlot))
-        start(MountModuleConfig.load(hostConfiguration.dataPath()))
+        nativeScope.restart()
+        nativeQueue = BudgetedTaskQueue(nativeScope)
+        return prepareAndStart(reload = true)
+    }
+
+    private fun prepareAndStart(reload: Boolean): CompletableFuture<Unit> {
+        check(!closed)
+        val token = ++generation
+        val scopeToken = nativeScope.token()
+        return hostConfiguration.ready().thenCompose {
+            nativeScope.callSync(scopeToken) {
+                check(!closed && token == generation) { "Mount preparation superseded" }
+                prepareReady(reload, token)
+            }.thenCompose { it }
+        }
+    }
+
+    private fun prepareReady(reload: Boolean, token: Long): CompletableFuture<Unit> {
+        val redisService = if (hostConfiguration.sharedRedisAvailable()) {
+            plugin.server.servicesManager.load(ArcRedisService::class.java)
+        } else null
+        val ownerName = plugin.name
+        val result = CompletableFuture<Unit>()
+        val scopeToken = nativeScope.token()
+        io.submit {
+            if (reload) ConfigManager.reloadAll()
+            val config = MountModuleConfig.load(dataPath, nativeValidation = false)
+            val transfer = MountTransferConfig.load(dataPath)
+            val menus = MountMenuConfiguration.prepare(dataPath)
+            val policy = MountCareBoostPolicy.load(dataPath)
+            val catalog = config.catalog()
+            val enabled = config.enabled && config.ownershipMigrationComplete
+            val journal = if (enabled) FileMountPurchaseJournal(dataPath.resolve("data/mount-purchases.json"), writer = io) else null
+            val redis = if (enabled && redisService != null) runCatching {
+                PaperRedisClient.openPrimary(redisService, ownerName).also { storageResources += it; it.retainDuringShutdown(); it.init() }
+            }.onFailure { warn("Mount care boost Redis lease unavailable: {}", it.javaClass.simpleName) }.getOrNull() else null
+            var ledger: OneTimeUseLedger? = null
+            var transfers: FileMountTransferStore? = null
+            if (enabled && transfer.enabled && config.purchasesEnabled) {
+                runCatching {
+                    transfers = FileMountTransferStore(dataPath, io)
+                    ledger = MySqlOneTimeUseLedger.open(
+                        transfer.sql(), "ARC-mount-transfers", "arc_mount_transfers",
+                        listOf(MySqlOneTimeUseLedger.createTableMigration(1)), MySqlOneTimeUsePartition("arc.mount-transfer"),
+                    ).also { storageResources += it }
+                }.onFailure { warn("Mount transfers unavailable: {}", it.javaClass.simpleName) }
+            }
+            Prepared(config, catalog, transfer, menus, policy, journal, redis, ledger, transfers)
+        }.whenComplete { prepared, failure ->
+            if (closed || token != generation) {
+                prepared?.let(::retirePrepared)
+                result.completeExceptionally(CancellationException("Mount preparation superseded"))
+            } else if (failure != null) {
+                result.completeExceptionally(failure)
+            } else {
+                nativeScope.callSync(scopeToken) {
+                    check(!closed && token == generation) { "Mount preparation superseded" }
+                    menuRuntime.replace(MountMenuConfiguration.parse(prepared.menus, prepared.transfer.detailSlot))
+                    start(prepared)
+                }.whenComplete { _, activationFailure ->
+                    if (activationFailure == null) result.complete(Unit)
+                    else {
+                        retirePrepared(prepared)
+                        result.completeExceptionally(activationFailure)
+                    }
+                }
+            }
+        }
+        return result
+    }
+
+    private data class Prepared(
+        val config: MountModuleConfig,
+        val catalog: MountCatalog,
+        val transfer: MountTransferConfig,
+        val menus: MountMenuConfiguration.Prepared,
+        val carePolicy: MountCareBoostPolicy,
+        val journal: FileMountPurchaseJournal?,
+        val redis: PaperRedisClient?,
+        val ledger: OneTimeUseLedger?,
+        val transfers: FileMountTransferStore?,
+    )
+
+    private fun retirePrepared(prepared: Prepared) {
+        prepared.ledger?.let(::retireStorage)
+        prepared.redis?.let(::retireStorage)
+    }
+
+    private fun retireStorage(resource: AutoCloseable) {
+        io.submit {
+            try { closeStorageResource(resource) } finally { storageResources.remove(resource) }
+        }
+        // If shutdown sealed admission, closeStorageResources owns the retained resource.
+    }
+
+    /** Called only on the owned worker; borrowed SQL leases stay held through advisory-lock cleanup. */
+    private fun closeStorageResource(resource: AutoCloseable) {
+        if (resource is MySqlOneTimeUseLedger) resource.closeAsync().join() else resource.close()
+    }
+
+    /** Worker terminal finalizer, after all accepted prepares and durable writes. */
+    internal fun closeStorageResources() {
+        var failure: Throwable? = null
+        storageResources.forEach { resource ->
+            try { closeStorageResource(resource) } catch (problem: Throwable) {
+                if (failure == null) failure = problem else failure.addSuppressed(problem)
+            } finally { storageResources.remove(resource) }
+        }
+        failure?.let { throw it }
     }
 
     override fun close() {
+        if (closed) return
+        closed = true
+        generation++
         shutdownRuntime()
         config = null
         catalog = null
-        redisClient?.close()
-        redisClient = null
     }
 
     fun summonFavorite(player: org.bukkit.entity.Player): Boolean = quickSummons?.summonFavorite(player) ?: false
@@ -94,7 +217,9 @@ internal class MountModule(
     internal fun activeMountSnapshot(player: org.bukkit.entity.Player): ActiveMountSnapshot? =
         sessions?.activeMountSnapshot(player)
 
-    private fun start(loadedConfig: MountModuleConfig) {
+    private fun start(prepared: Prepared) {
+        val loadedConfig = prepared.config
+        transferConfig = prepared.transfer
         config = loadedConfig
         if (!loadedConfig.enabled) {
             info("Mounts module disabled by configuration")
@@ -109,22 +234,25 @@ internal class MountModule(
             warn("Rider-only mount visibility is unavailable because PacketEvents is not active")
         }
 
-        val loadedCatalog = loadedConfig.catalog()
+        val loadedCatalog = prepared.catalog
+        MountGuiItemRole.entries.forEach(loadedConfig::guiStyle)
         validatePaperTypes(loadedCatalog)
         val luckPerms = plugin.server.servicesManager.load(LuckPerms::class.java)
         if (luckPerms == null) {
             warn("Mounts module disabled because LuckPerms API is unavailable")
+            retirePrepared(prepared)
             return
         }
 
         val loadedOwnership = LuckPermsMountOwnership(luckPerms)
         val wallet = HostMountWallet(plugin)
-        val journal = FileMountPurchaseJournal(hostConfiguration.dataPath().resolve("data").resolve("mount-purchases.json"))
+        val journal = requireNotNull(prepared.journal)
         this.journal = journal
-        val loadedRedisClient = refreshRedisClient()
+        val loadedRedisClient = prepared.redis
+        redisClient = loadedRedisClient
         val loadedCareBoosts = MountCareBoostService(
             store = loadedRedisClient?.let(::RedisMountCareBoostStore) ?: UnavailableMountCareBoostStore,
-            policy = MountCareBoostPolicy.load(hostConfiguration.dataPath()),
+            policy = prepared.carePolicy,
         )
         careBoosts = loadedCareBoosts
         val controller =
@@ -142,7 +270,7 @@ internal class MountModule(
                 careBoostStatusProvider = { playerId, nowMillis -> loadedCareBoosts.cachedStatus(playerId, nowMillis) },
                 recordProductOutcome = telemetry::recordProductOutcome,
                 recordActivity = telemetry::recordActivity,
-                dataPath = hostConfiguration.dataPath(),
+                dataPath = dataPath,
             )
         val coordinator =
             MountPurchaseCoordinator(
@@ -156,6 +284,8 @@ internal class MountModule(
                 purchaseAllowed = { playerId -> Bukkit.getPlayer(playerId)?.let(MountMerchantGate::isAtMerchant) == true },
                 sharedBusy = rewardGrant::isBusy,
                 recordActivity = telemetry::recordActivity,
+                onFailure = { failure -> plugin.logger.log(java.util.logging.Level.SEVERE, "Mount purchase continuation failed", failure) },
+                recoverStep = { action -> nativeQueue.call({ !closed }, action) },
             )
         val summonService =
             MountSummonService(
@@ -189,27 +319,19 @@ internal class MountModule(
                 scheduler = scheduler,
             )
 
-        val transferConfig = MountTransferConfig.load(hostConfiguration.dataPath())
-        if (transferConfig.enabled && loadedConfig.purchasesEnabled) {
-            try {
-                val ledger = MySqlOneTimeUseLedger.open(
-                    transferConfig.sql(), "ARC-mount-transfers", "arc_mount_transfers",
-                    listOf(MySqlOneTimeUseLedger.createTableMigration(1)),
-                    MySqlOneTimeUsePartition("arc.mount-transfer"),
-                )
-                try {
-                    transfers = MountTransferController(
-                        plugin, transferConfig, loadedCatalog, ledger, LuckPermsMountTransfers(luckPerms),
-                        controller, coordinator::isBusy, guiController::openDetail,
-                        { playerId, mount -> loadedOwnership.profile(MountPermissionSubject(playerId, "", { false }), mount) },
-                        scheduler = scheduler,
-                        backgroundStyle = ::currentBackgroundStyle,
-                        dataPath = hostConfiguration.dataPath(),
-                    )
-                } catch (failure: Throwable) { ledger.close(); throw failure }
-            } catch (failure: Exception) {
-                warn("Mount transfers unavailable: {}", failure.javaClass.simpleName)
-            }
+        val transferConfig = prepared.transfer
+        prepared.ledger?.let { ledger ->
+            transfers = MountTransferController(
+                plugin, transferConfig, loadedCatalog, ledger, LuckPermsMountTransfers(luckPerms),
+                controller, coordinator::isBusy, guiController::openDetail,
+                { playerId, mount -> loadedOwnership.profile(MountPermissionSubject(playerId, "", { false }), mount) },
+                scheduler = scheduler,
+                backgroundStyle = ::currentBackgroundStyle,
+                dataPath = dataPath,
+                store = requireNotNull(prepared.transfers),
+                closeLedger = { retireStorage(ledger) },
+                queue = nativeQueue,
+            )
         }
 
         catalog = loadedCatalog
@@ -240,15 +362,19 @@ internal class MountModule(
             transfers?.start()
             bindCommands(guiController, loadedOwnership, controller)
             hydration.start()
-            Bukkit.getOnlinePlayers().forEach { player ->
-                loadedCareBoosts.hydrate(player.uniqueId).whenComplete { _, failure ->
-                    if (failure == null) {
-                        scheduler.runLater(1L, Runnable {
+            val hydrationToken = nativeScope.token()
+            val players = Bukkit.getOnlinePlayers().toList().iterator()
+            nativeQueue.submit({ !closed && careBoosts === loadedCareBoosts && sessions === controller }) {
+                if (!players.hasNext()) true else {
+                    val playerId = players.next().uniqueId
+                    loadedCareBoosts.hydrate(playerId).whenComplete { _, failure ->
+                        if (failure == null) nativeScope.callSync(hydrationToken) {
                             if (careBoosts === loadedCareBoosts && sessions === controller) {
-                                refreshCareBoostedMount(player.uniqueId, controller, summonService, loadedCatalog)
+                                refreshCareBoostedMount(playerId, controller, summonService, loadedCatalog)
                             }
-                        })
+                        }
                     }
+                    !players.hasNext()
                 }
             }
         } catch (failure: Throwable) {
@@ -260,13 +386,15 @@ internal class MountModule(
     }
 
     private fun shutdownRuntime() {
+        nativeQueue.close()
+        nativeScope.cancelAll()
         rewardGrant.close()
         bindUnavailableCommands()
         careBoostHydration?.close()
         careBoostHydration = null
         careBoosts?.close()
         careBoosts = null
-        redisClient?.close()
+        redisClient?.let(::retireStorage)
         redisClient = null
         transfers?.close()
         transfers = null
@@ -316,7 +444,7 @@ internal class MountModule(
                 openDetail = guiController::openDetail,
                 packMount = { player, id ->
                     transfers?.confirm(player, id) ?: player.sendMessage(TextUtils.mm(
-                        MountTransferConfig.load(hostConfiguration.dataPath()).text("spawn-only", "<#ff9f0f>Упаковка и активация свидетельств доступны на спавне.")
+                        requireNotNull(transferConfig).text("spawn-only", "<#ff9f0f>Упаковка и активация свидетельств доступны на спавне.")
                     ))
                 },
             )
@@ -324,21 +452,6 @@ internal class MountModule(
             setExecutor(mountCommand)
             tabCompleter = mountCommand
         } ?: warn("Mount command is missing from plugin.yml")
-    }
-
-    private fun refreshRedisClient(): PaperRedisClient? {
-        val generation = hostConfiguration.sharedRedisGeneration()
-        val available = hostConfiguration.sharedRedisAvailable()
-        if (redisGeneration == generation && (!available || redisClient != null)) return redisClient
-        redisClient?.close()
-        redisClient = null
-        redisGeneration = generation
-        if (!available) return null
-        return runCatching {
-            PaperRedisClient.openPrimary(plugin).also { it.init() }.also { redisClient = it }
-        }.onFailure { failure ->
-            warn("Mount care boost Redis lease unavailable: {}", failure.javaClass.simpleName)
-        }.getOrNull()
     }
 
     private fun bindUnavailableCommands() {

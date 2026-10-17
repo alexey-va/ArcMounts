@@ -3,6 +3,13 @@ package ru.arc.mounts
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CancellationException
+import kotlin.coroutines.Continuation
+import kotlin.coroutines.EmptyCoroutineContext
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
+import kotlin.coroutines.startCoroutine
+import kotlin.coroutines.suspendCoroutine
 
 sealed interface MountPurchaseResult {
     data object Success : MountPurchaseResult
@@ -35,8 +42,13 @@ class MountPurchaseCoordinator(
     private val purchaseAllowed: (UUID) -> Boolean = { true },
     private val sharedBusy: (UUID) -> Boolean = { false },
     private val recordActivity: (UUID, String, String?, String?, Map<String, String>) -> Unit = { _, _, _, _, _ -> },
+    private val onFailure: (Throwable) -> Unit = {},
+    private val recoverStep: (() -> Unit) -> CompletableFuture<Unit> = { action ->
+        action(); CompletableFuture.completedFuture(Unit)
+    },
 ) {
     private val activePurchases = ConcurrentHashMap.newKeySet<UUID>()
+    @Volatile private var closed = false
 
     fun purchaseLevel(
         subject: MountPermissionSubject,
@@ -247,7 +259,13 @@ class MountPurchaseCoordinator(
     }
 
     fun recover(catalog: MountCatalog, onManualReview: (MountPurchaseJournalRecord) -> Unit) {
-        journal.records().filter { !it.status.terminal || it.status == MountPurchaseJournalStatus.MANUAL_REVIEW }.forEach { record ->
+        onMain { recoverRecords(catalog, onManualReview) }
+    }
+
+    private suspend fun recoverRecords(catalog: MountCatalog, onManualReview: (MountPurchaseJournalRecord) -> Unit) {
+        journal.records().forEach { record ->
+            if (record.status.terminal && record.status != MountPurchaseJournalStatus.MANUAL_REVIEW) return@forEach
+            awaitRecoveryStep()
             val mount = catalog[record.mountId]
             if (mount == null) {
                 markManualReview(record, "mount_missing")?.let(onManualReview)
@@ -270,6 +288,7 @@ class MountPurchaseCoordinator(
     }
 
     fun clear() {
+        closed = true
         activePurchases.clear()
     }
 
@@ -278,6 +297,20 @@ class MountPurchaseCoordinator(
     internal fun isPurchaseBusy(playerId: UUID): Boolean = playerId in activePurchases || journal.hasOpenPurchase(playerId)
 
     private fun purchase(
+        playerId: UUID,
+        mount: MountDefinition,
+        kind: MountPurchaseKind,
+        target: String,
+        permission: String,
+        price: Double,
+        currency: String,
+        callback: (MountPurchaseResult) -> Unit,
+        applyPermission: () -> CompletableFuture<Void>,
+    ) {
+        onMain { purchaseDurably(playerId, mount, kind, target, permission, price, currency, callback, applyPermission) }
+    }
+
+    private suspend fun purchaseDurably(
         playerId: UUID,
         mount: MountDefinition,
         kind: MountPurchaseKind,
@@ -331,6 +364,10 @@ class MountPurchaseCoordinator(
                 balanceBeforeMinor = balanceBefore,
             )
         if (!persist(started)) return finish(playerId, callback, MountPurchaseResult.JournalUnavailable)
+        if (!purchaseAllowed(playerId)) {
+            val cancelled = persist(started.advance(MountPurchaseJournalStatus.CANCELLED, "merchant_context_lost"))
+            return finish(playerId, callback, if (cancelled) MountPurchaseResult.MerchantRequired else MountPurchaseResult.JournalUnavailable)
+        }
 
         val evidence = purchaseWallet.withdraw(playerId, record.priceMinor, "arc-mount:${record.transactionId}", balanceBefore)
         val expectedAfter = balanceBefore - record.priceMinor
@@ -361,7 +398,7 @@ class MountPurchaseCoordinator(
             verifyOrRefund(playerId, ownershipStarted, callback)
             return
         }
-        future.whenComplete { _, _ -> runSync { verifyOrRefund(playerId, ownershipStarted, callback) } }
+        future.whenComplete { _, _ -> onMain { verifyOrRefund(playerId, ownershipStarted, callback) } }
     }
 
     private fun verifyOrRefund(
@@ -370,7 +407,7 @@ class MountPurchaseCoordinator(
         callback: (MountPurchaseResult) -> Unit,
     ) {
         ownership.hasDirectPermission(playerId, record.permission).whenComplete { owned, verificationFailure ->
-            runSync {
+            onMain {
                 when {
                     verificationFailure != null -> {
                         persist(record.advance(MountPurchaseJournalStatus.MANUAL_REVIEW, "permission_verification_failed"))
@@ -391,7 +428,7 @@ class MountPurchaseCoordinator(
         }
     }
 
-    private fun refund(
+    private suspend fun refund(
         playerId: UUID,
         record: MountPurchaseJournalRecord,
         callback: (MountPurchaseResult) -> Unit,
@@ -443,25 +480,25 @@ class MountPurchaseCoordinator(
     ) {
         val playerId = UUID.fromString(record.playerId)
         ownership.hasDirectPermission(playerId, record.permission).whenComplete { owned, lookupFailure ->
-            runSync {
+            onMain {
                 if (lookupFailure != null) {
                     markManualReview(record, "startup_permission_lookup_failed")?.let(onManualReview)
-                    return@runSync
+                    return@onMain
                 }
                 if (owned == true) {
                     if (!persist(record.advance(MountPurchaseJournalStatus.COMPLETED, "startup_permission_verified"))) {
                         onManualReview(record)
                     }
-                    return@runSync
+                    return@onMain
                 }
                 val write = permissionWrite(record, mount)
                 if (write == null) {
                     markManualReview(record, "startup_target_missing")?.let(onManualReview)
-                    return@runSync
+                    return@onMain
                 }
                 write.whenComplete { _, _ ->
                     ownership.hasDirectPermission(playerId, record.permission).whenComplete { recovered, verifyFailure ->
-                        runSync {
+                        onMain {
                             if (verifyFailure == null && recovered == true) {
                                 if (!persist(record.advance(MountPurchaseJournalStatus.COMPLETED, "startup_permission_recovered"))) {
                                     onManualReview(record)
@@ -483,7 +520,7 @@ class MountPurchaseCoordinator(
     ) {
         val playerId = UUID.fromString(record.playerId)
         ownership.hasDirectPermission(playerId, record.permission).whenComplete { owned, lookupFailure ->
-            runSync {
+            onMain {
                 val withdrawalProven =
                     record.balanceBeforeMinor != null &&
                         record.balanceAfterMinor == record.balanceBeforeMinor - record.priceMinor
@@ -504,7 +541,7 @@ class MountPurchaseCoordinator(
         }
     }
 
-    private fun recoverWithdrawal(
+    private suspend fun recoverWithdrawal(
         record: MountPurchaseJournalRecord,
         mount: MountDefinition,
         onManualReview: (MountPurchaseJournalRecord) -> Unit,
@@ -521,11 +558,11 @@ class MountPurchaseCoordinator(
             reason = "arc-mount:${record.transactionId}",
             notBeforeMillis = record.createdAt,
         ).whenComplete { history, failure ->
-            runSync {
+            onMain {
                 if (failure != null || history?.found != true) {
                     val evidence = if (history?.historyAvailable == true) "withdrawal_not_found_in_history" else "withdrawal_history_unavailable"
                     markManualReview(record, evidence)?.let(onManualReview)
-                    return@runSync
+                    return@onMain
                 }
                 val before = requireNotNull(record.balanceBeforeMinor)
                 val withdrawn =
@@ -541,7 +578,7 @@ class MountPurchaseCoordinator(
         }
     }
 
-    private fun recoverRefund(
+    private suspend fun recoverRefund(
         record: MountPurchaseJournalRecord,
         onManualReview: (MountPurchaseJournalRecord) -> Unit,
     ) {
@@ -557,11 +594,11 @@ class MountPurchaseCoordinator(
             reason = "arc-mount-refund:${record.transactionId}",
             notBeforeMillis = record.createdAt,
         ).whenComplete { history, failure ->
-            runSync {
+            onMain {
                 if (failure != null || history?.found != true) {
                     val evidence = if (history?.historyAvailable == true) "refund_not_found_in_history" else "refund_history_unavailable"
                     markManualReview(record, evidence)?.let(onManualReview)
-                    return@runSync
+                    return@onMain
                 }
                 val before = requireNotNull(record.refundBalanceBeforeMinor)
                 val refunded =
@@ -601,7 +638,7 @@ class MountPurchaseCoordinator(
             return
         }
         future.whenComplete { _, failure ->
-            runSync {
+            onMain {
                 activePurchases.remove(playerId)
                 callback(if (failure == null) MountPurchaseResult.Success else MountPurchaseResult.PersistenceFailed)
             }
@@ -618,9 +655,17 @@ class MountPurchaseCoordinator(
         callback(result)
     }
 
-    private fun markManualReview(record: MountPurchaseJournalRecord, evidence: String): MountPurchaseJournalRecord? {
+    private suspend fun awaitRecoveryStep(): Unit = suspendCoroutine { continuation ->
+        recoverStep {}.whenComplete { _, failure ->
+            if (failure != null) continuation.resumeWithException(failure)
+            else if (closed) continuation.resumeWithException(CancellationException("Mount purchases closed"))
+            else continuation.resume(Unit)
+        }
+    }
+
+    private suspend fun markManualReview(record: MountPurchaseJournalRecord, evidence: String): MountPurchaseJournalRecord? {
         val review = record.advance(MountPurchaseJournalStatus.MANUAL_REVIEW, evidence)
-        return review.takeIf(::persist)
+        return if (persist(review)) review else null
     }
 
     private fun MountPurchaseJournalRecord.advance(
@@ -630,8 +675,45 @@ class MountPurchaseCoordinator(
 
     private fun nextTime(previous: Long): Long = maxOf(clock(), previous + 1L)
 
-    private fun persist(record: MountPurchaseJournalRecord): Boolean =
-        runCatching { journal.persist(record) }.getOrDefault(false).also { persisted ->
+    /** Every resume crosses the server executor and rechecks this runtime's lifetime. */
+    private fun onMain(action: suspend () -> Unit) {
+        if (closed) return
+        runSync {
+            if (closed) return@runSync
+            action.startCoroutine(object : Continuation<Unit> {
+                override val context = EmptyCoroutineContext
+                override fun resumeWith(result: Result<Unit>) {
+                    result.exceptionOrNull()?.takeUnless { it is CancellationException }?.let(onFailure)
+                }
+            })
+        }
+    }
+
+    private suspend fun awaitWrite(record: MountPurchaseJournalRecord): Boolean = suspendCoroutine { continuation ->
+        if (closed) {
+            continuation.resumeWithException(CancellationException("Mount purchase runtime closed"))
+        } else {
+            val future = runCatching { journal.persistAsync(record) }.getOrElse {
+                continuation.resume(false)
+                return@suspendCoroutine
+            }
+            future.whenComplete { saved, failure ->
+                if (closed) {
+                    continuation.resumeWithException(CancellationException("Mount purchase runtime closed"))
+                } else try {
+                    runSync {
+                        if (closed) continuation.resumeWithException(CancellationException("Mount purchase runtime closed"))
+                        else continuation.resume(failure == null && saved == true)
+                    }
+                } catch (rejected: Throwable) {
+                    continuation.resumeWithException(rejected)
+                }
+            }
+        }
+    }
+
+    private suspend fun persist(record: MountPurchaseJournalRecord): Boolean =
+        awaitWrite(record).also { persisted ->
             if (persisted) {
                 onStateChanged()
                 recordActivity(

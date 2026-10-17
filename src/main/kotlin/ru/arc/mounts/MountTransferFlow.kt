@@ -22,7 +22,7 @@ class MountTransferFlow(
 ) {
     private val executing = mutableSetOf<UUID>()
 
-    internal fun isBusyWithoutOther(playerId: UUID): Boolean = playerId in executing || store.records().any {
+    internal fun isBusyWithoutOther(playerId: UUID): Boolean = playerId in executing || store.recordsFor(playerId).any {
         it.issuer == playerId && it.stage in setOf(MountTransferStage.PACKING, MountTransferStage.DELIVERING) ||
             it.recipient == playerId && it.stage in setOf(MountTransferStage.CLAIMING, MountTransferStage.APPLIED)
     }
@@ -36,8 +36,7 @@ class MountTransferFlow(
         executing += playerId
         continueSyncCall(playerId, done, { ownership.snapshot(playerId, mount) }) { permissions ->
             val record = MountTransferRecord(UUID.randomUUID(), playerId, mount.id, permissions)
-            store.save(record)
-            finishPacking(record, mount, done)
+            continueSyncCall(playerId, done, { store.saveAsync(record) }) { finishPacking(record, mount, done) }
         }
     }
 
@@ -55,8 +54,9 @@ class MountTransferFlow(
     private fun finishPacking(record: MountTransferRecord, mount: MountDefinition, done: (Result<MountTransferRecord>) -> Unit) {
         continueSyncVoidCall(record.issuer, done, { ownership.pack(record, mount) }) {
             val packed = record.copy(stage = MountTransferStage.PACKED)
-            store.save(packed)
-            finish(record.issuer, done, Result.success(packed))
+            continueSyncCall(record.issuer, done, { store.saveAsync(packed) }) {
+                finish(record.issuer, done, Result.success(packed))
+            }
         }
     }
 
@@ -71,8 +71,7 @@ class MountTransferFlow(
             // Another holder may have started while the permission read was in flight.
             check(store.get(id) == record) { "Certificate already claimed" }
             val claiming = record.copy(stage = MountTransferStage.CLAIMING, recipient = playerId)
-            store.save(claiming)
-            claim(claiming, mount, done)
+            continueSyncCall(playerId, done, { store.saveAsync(claiming) }) { claim(claiming, mount, done) }
         }
     }
 
@@ -96,16 +95,18 @@ class MountTransferFlow(
                         abandonAndFinish(result.claim, playerId, done, failure)
                     } else {
                         val applied = record.copy(stage = MountTransferStage.APPLIED)
-                        try { store.save(applied) } catch (failure: Throwable) {
-                            abandonAndFinish(result.claim, playerId, done, failure)
-                            return@runSync
-                        }
+                        store.saveAsync(applied).whenComplete { _, writeFailure ->
+                            runSync writeComplete@{
+                                if (writeFailure != null) {
+                                    abandonAndFinish(result.claim, playerId, done, writeFailure)
+                                    return@writeComplete
+                                }
                         val commit =
                             try {
                                 ledger.commit(result.claim)
                             } catch (commitFailure: Throwable) {
                                 abandonAndFinish(result.claim, playerId, done, commitFailure)
-                                return@runSync
+                                return@writeComplete
                             }
                         commit.whenComplete { committed, commitFailure ->
                             runSync {
@@ -127,6 +128,8 @@ class MountTransferFlow(
                                 }
                             }
                         }
+                            }
+                        }
                     }
                 }
             }
@@ -135,8 +138,8 @@ class MountTransferFlow(
 
     private fun complete(record: MountTransferRecord, done: (Result<MountTransferRecord>) -> Unit) {
         val consumed = record.copy(stage = MountTransferStage.CONSUMED)
-        store.save(consumed)
-        finish(requireNotNull(record.recipient), done, Result.success(consumed))
+        val playerId = requireNotNull(record.recipient)
+        continueSyncCall(playerId, done, { store.saveAsync(consumed) }) { finish(playerId, done, Result.success(consumed)) }
     }
 
     private fun <T> continueSync(

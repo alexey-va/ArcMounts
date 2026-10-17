@@ -22,6 +22,7 @@ import org.bukkit.inventory.meta.ItemMeta
 import org.bukkit.persistence.PersistentDataType
 import org.bukkit.plugin.java.JavaPlugin
 import ru.arc.core.LifecycleTaskScope
+import ru.arc.core.BudgetedTaskQueue
 import ru.arc.core.TaskScheduler
 import ru.arc.onetime.OneTimeUseLedger
 import ru.arc.util.Logging.warn
@@ -54,26 +55,40 @@ class MountTransferController(
     scheduler: TaskScheduler,
     private val backgroundStyle: () -> MountGuiItemStyle?,
     dataPath: Path,
+    private val store: MountTransferStore = FileMountTransferStore(dataPath),
+    private val closeLedger: () -> Unit = ledger::close,
+    queue: BudgetedTaskQueue? = null,
 ) : Listener, AutoCloseable {
     private val scope = LifecycleTaskScope(scheduler)
     private val key = NamespacedKey("arc", "mount_certificate")
-    private val store = FileMountTransferStore(dataPath)
+    private val ownsQueue = queue == null
+    private val work = queue ?: BudgetedTaskQueue(scope)
+    private val delivering = mutableSetOf<UUID>()
     private val flow = MountTransferFlow(store, ownership, ledger, { scope.runSync(it) }, otherBusy)
     val detailSlot get() = config.detailSlot
 
     fun start() {
         require(detailSlot in 0..44 && detailSlot !in setOf(4, 13, 20, 22, 24, 29, 30, 31, 32, 33, 36, 40, 42))
         plugin.server.pluginManager.registerEvents(this, plugin)
-        store.records().filter { it.stage in setOf(MountTransferStage.PACKING, MountTransferStage.CLAIMING, MountTransferStage.APPLIED) }
-            .forEach { record -> catalog[record.mountId]?.let { mount ->
-                flow.recover(record, mount) { outcome -> handle(outcome, record.recipient ?: record.issuer) }
-            } }
+        val token = scope.token()
+        val pending = store.records().iterator()
+        work.submit({ scope.isCurrent(token) }) {
+            if (!pending.hasNext()) true else {
+                val record = pending.next()
+                if (record.stage in setOf(MountTransferStage.PACKING, MountTransferStage.CLAIMING, MountTransferStage.APPLIED)) {
+                    catalog[record.mountId]?.let { mount ->
+                        flow.recover(record, mount) { outcome -> handle(outcome, record.recipient ?: record.issuer) }
+                    }
+                }
+                !pending.hasNext()
+            }
+        }
         plugin.server.onlinePlayers.forEach(::recoverDelivery)
     }
 
-    fun isBusy(playerId: UUID): Boolean = flow.isBusy(playerId)
+    fun isBusy(playerId: UUID): Boolean = flow.isBusy(playerId) || playerId in delivering
 
-    internal fun isBusyWithoutOther(playerId: UUID): Boolean = flow.isBusyWithoutOther(playerId)
+    internal fun isBusyWithoutOther(playerId: UUID): Boolean = flow.isBusyWithoutOther(playerId) || playerId in delivering
 
     fun button(unlocked: Boolean): ItemStack = item(
         if (unlocked) Material.NAME_TAG else Material.GRAY_DYE,
@@ -184,16 +199,24 @@ class MountTransferController(
     }
 
     fun recoverDelivery(player: Player) {
-        store.records().filter {
-            it.issuer == player.uniqueId && it.stage == MountTransferStage.PACKING ||
-                it.recipient == player.uniqueId && it.stage in setOf(MountTransferStage.CLAIMING, MountTransferStage.APPLIED)
-        }.forEach { record -> catalog[record.mountId]?.let { mount ->
-            flow.recover(record, mount) { handle(it, player.uniqueId) }
-        } }
-        store.records().filter { it.issuer == player.uniqueId && it.stage in setOf(MountTransferStage.PACKED, MountTransferStage.DELIVERING) }
-            .forEach { deliver(player, it) }
-        store.records().filter { it.recipient == player.uniqueId && it.stage == MountTransferStage.CONSUMED }
-            .forEach { removeCertificate(player, it.id) }
+        val playerId = player.uniqueId
+        val token = scope.token()
+        val records = store.recordsFor(playerId).iterator()
+        work.submit({ scope.isCurrent(token) && player.isOnline }) {
+            if (playerId in delivering) false
+            else if (!records.hasNext()) true else {
+                val record = records.next()
+                when {
+                    record.issuer == playerId && record.stage == MountTransferStage.PACKING ||
+                        record.recipient == playerId && record.stage in setOf(MountTransferStage.CLAIMING, MountTransferStage.APPLIED) ->
+                        catalog[record.mountId]?.let { mount -> flow.recover(record, mount) { handle(it, playerId) } }
+                    record.issuer == playerId && record.stage in setOf(MountTransferStage.PACKED, MountTransferStage.DELIVERING) ->
+                        deliver(player, record)
+                    record.recipient == playerId && record.stage == MountTransferStage.CONSUMED -> removeCertificate(player, record.id)
+                }
+                !records.hasNext()
+            }
+        }
     }
 
     private fun handle(outcome: Result<MountTransferRecord>, playerId: UUID) {
@@ -216,7 +239,10 @@ class MountTransferController(
 
     private fun deliver(player: Player, record: MountTransferRecord) {
         if (player.inventory.contents.any { certificateId(it) == record.id }) {
-            store.save(record.copy(stage = MountTransferStage.AVAILABLE)); return
+            store.saveAsync(record.copy(stage = MountTransferStage.AVAILABLE)).whenComplete { _, failure ->
+                if (failure != null) warn("Mount certificate acknowledgement failed for {}: {}", record.id, failure.javaClass.simpleName)
+            }
+            return
         }
         if (record.stage == MountTransferStage.DELIVERING) {
             send(player, "delivery-review", "<#ff9f0f>Выдача свидетельства требует сверки после перезапуска. Маунт сохранён в реестре; сообщите администрации.")
@@ -246,20 +272,38 @@ class MountTransferController(
             .map { it.replace("<mount>", mount.displayName).replace("<level>", level.toString()) }
         val certificate = item(Material.PRISMARINE_SHARD, text("certificate-name", "<#ffacd5>Свидетельство маунта"), lore)
         certificate.editMeta { it.persistentDataContainer.set(key, PersistentDataType.STRING, record.id.toString()) }
-        store.save(record.copy(stage = MountTransferStage.DELIVERING))
-        player.inventory.setItem(slot, certificate)
-        player.saveData()
-        store.save(record.copy(stage = MountTransferStage.AVAILABLE))
-        player.sendMessage(
-            TextUtils.mm(
-                text(
-                    "packed",
-                    "<#2bba43>Упакован маунт <white><mount><green> (<rarity>), уровень <white><level><green>. Свидетельство содержит текущие улучшения.",
-                ).replace("<mount>", mount.displayName)
-                    .replace("<rarity>", "${mount.rarity.color}${mount.rarity.displayName}")
-                    .replace("<level>", level.toString()),
-            ),
-        )
+        if (!delivering.add(player.uniqueId)) return
+        val token = scope.token()
+        store.saveAsync(record.copy(stage = MountTransferStage.DELIVERING)).whenComplete { _, failure ->
+            scope.runSync(token) {
+                if (failure != null || !player.isOnline) {
+                    delivering.remove(player.uniqueId)
+                    if (failure != null) handle(Result.failure(failure), player.uniqueId)
+                    return@runSync
+                }
+                // Inventory may have changed while the durable intent was being committed.
+                val currentSlot = player.inventory.firstEmpty()
+                if (currentSlot < 0) {
+                    delivering.remove(player.uniqueId)
+                    send(player, "delivery-review", "<#ff9f0f>Выдача свидетельства требует сверки после перезапуска. Маунт сохранён в реестре; сообщите администрации.")
+                    return@runSync
+                }
+                player.inventory.setItem(currentSlot, certificate)
+                player.saveData()
+                store.saveAsync(record.copy(stage = MountTransferStage.AVAILABLE)).whenComplete { _, ackFailure ->
+                    scope.runSync(token) {
+                        delivering.remove(player.uniqueId)
+                        if (ackFailure != null) handle(Result.failure(ackFailure), player.uniqueId)
+                        else if (player.isOnline) player.sendMessage(TextUtils.mm(text(
+                            "packed",
+                            "<#2bba43>Упакован маунт <white><mount><green> (<rarity>), уровень <white><level><green>. Свидетельство содержит текущие улучшения.",
+                        ).replace("<mount>", mount.displayName)
+                            .replace("<rarity>", "${mount.rarity.color}${mount.rarity.displayName}")
+                            .replace("<level>", level.toString())))
+                    }
+                }
+            }
+        }
     }
 
     private fun removeCertificate(player: Player, id: UUID) {
@@ -289,9 +333,10 @@ class MountTransferController(
     }
 
     override fun close() {
+        if (ownsQueue) work.close()
         scope.close()
         plugin.server.onlinePlayers.filter { it.openInventory.topInventory.holder is MountPackingMenu }.forEach(Player::closeInventory)
         HandlerList.unregisterAll(this)
-        ledger.close()
+        closeLedger()
     }
 }

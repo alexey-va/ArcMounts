@@ -163,7 +163,7 @@ open class MountModuleConfig(private val config: Config) {
         return MountCatalog(definitions)
     }
 
-    open fun validated(): MountModuleConfig {
+    open fun validated(nativeValidation: Boolean = true): MountModuleConfig {
         if (!enabled) return this
         require(!sessionDuration.isZero && !sessionDuration.isNegative) { "Mount session-duration must be positive" }
         require(!adminSessionDuration.isZero && !adminSessionDuration.isNegative) { "Mount admin-session-duration must be positive" }
@@ -201,7 +201,7 @@ open class MountModuleConfig(private val config: Config) {
         }
         require(maximumHeightAboveWorld in 0..256) { "Mount maximum-height-above-world must be between 0 and 256" }
         tuning
-        MountGuiItemRole.entries.forEach(::guiStyle)
+        if (nativeValidation) MountGuiItemRole.entries.forEach(::guiStyle)
         require(
             guiLines(
                 "detail.mount-state-lore",
@@ -636,10 +636,10 @@ open class MountModuleConfig(private val config: Config) {
             .getOrElse { throw IllegalArgumentException("Mount '$mountId' has invalid rarity '$raw'") }
 
     companion object {
-        fun load(dataPath: Path): MountModuleConfig {
+        fun load(dataPath: Path, nativeValidation: Boolean = true): MountModuleConfig {
             val source = ConfigManager.ofModule(dataPath, "mounts.yml")
             source.mergeMissingFromBundled("modules/mounts.yml")
-            return MountModuleConfig(source).validated()
+            return MountModuleConfig(source).validated(nativeValidation)
         }
     }
 }

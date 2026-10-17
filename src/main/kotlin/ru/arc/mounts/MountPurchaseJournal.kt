@@ -3,6 +3,8 @@ package ru.arc.mounts
 import com.google.gson.Gson
 import java.nio.file.Path
 import java.util.UUID
+import java.util.concurrent.CompletableFuture
+import ru.arc.core.BoundedAsyncExecutor
 import ru.arc.persistence.AtomicFileStore
 
 enum class MountPurchaseKind {
@@ -109,6 +111,10 @@ interface MountPurchaseJournal {
 
     fun persist(record: MountPurchaseJournalRecord): Boolean
 
+    /** Acknowledges the durable write; production journals dispatch to their owned writer. */
+    fun persistAsync(record: MountPurchaseJournalRecord): CompletableFuture<Boolean> =
+        runCatching { persist(record) }.fold(CompletableFuture<Boolean>::completedFuture, CompletableFuture<Boolean>::failedFuture)
+
     fun hasOpenPurchase(playerId: UUID): Boolean =
         records().any {
             it.playerId == playerId.toString() &&
@@ -119,8 +125,10 @@ interface MountPurchaseJournal {
 class FileMountPurchaseJournal(
     private val path: Path,
     private val gson: Gson = MountJson.prettyGson,
+    private val writer: BoundedAsyncExecutor? = null,
 ) : MountPurchaseJournal {
     private val recordsById = linkedMapOf<String, MountPurchaseJournalRecord>()
+    @Volatile private var published = JournalView(emptyList(), emptySet())
     private val file = AtomicFileStore(
         root = requireNotNull(path.toAbsolutePath().normalize().parent),
         relativePath = Path.of(path.fileName.toString()),
@@ -136,12 +144,17 @@ class FileMountPurchaseJournal(
 
     init {
         load()
+        publish()
     }
 
-    @Synchronized
-    override fun records(): List<MountPurchaseJournalRecord> = recordsById.values.toList()
+    override fun records(): List<MountPurchaseJournalRecord> = published.records
 
-    @Synchronized
+    override fun hasOpenPurchase(playerId: UUID): Boolean = playerId.toString() in published.pendingPlayers
+
+    override fun persistAsync(record: MountPurchaseJournalRecord): CompletableFuture<Boolean> =
+        writer?.submit { persist(record) } ?: super.persistAsync(record)
+
+    // The production owner invokes this only on its serial writer. Readers use the immutable view.
     override fun persist(record: MountPurchaseJournalRecord): Boolean {
         val valid = record.validated()
         val current = recordsById[valid.transactionId]
@@ -174,7 +187,17 @@ class FileMountPurchaseJournal(
             val snapshot = file.write(MountPurchaseJournalSnapshot(records = compacted))
             recordsById.clear()
             snapshot.records.forEach { recordsById[it.transactionId] = it }
+            publish()
         }.isSuccess
+    }
+
+    private data class JournalView(val records: List<MountPurchaseJournalRecord>, val pendingPlayers: Set<String>)
+
+    private fun publish() {
+        val snapshot = recordsById.values.toList()
+        published = JournalView(snapshot, snapshot.asSequence()
+            .filter { !it.status.terminal || it.status == MountPurchaseJournalStatus.MANUAL_REVIEW }
+            .map(MountPurchaseJournalRecord::playerId).toSet())
     }
 
     private fun load() {
@@ -192,7 +215,8 @@ class FileMountPurchaseJournal(
 
     private fun compact(records: Collection<MountPurchaseJournalRecord>): List<MountPurchaseJournalRecord> {
         val unresolved = records.filter { !it.status.terminal || it.status == MountPurchaseJournalStatus.MANUAL_REVIEW }
-        val resolved = records.filterNot { it in unresolved }.sortedByDescending(MountPurchaseJournalRecord::updatedAt)
+        val resolved = records.filter { it.status.terminal && it.status != MountPurchaseJournalStatus.MANUAL_REVIEW }
+            .sortedByDescending(MountPurchaseJournalRecord::updatedAt)
         require(unresolved.size <= MAX_NON_TERMINAL) { "Too many unresolved mount purchase records" }
         return (unresolved + resolved.take(MAX_RECORDS - unresolved.size)).sortedBy(MountPurchaseJournalRecord::createdAt)
     }

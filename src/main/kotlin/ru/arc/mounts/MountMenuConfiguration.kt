@@ -51,7 +51,12 @@ internal object MountMenuConfiguration {
         confirm to MenuContract(requiredElements = elements("cancel", "info", "accept")),
     )
 
-    fun load(dataRoot: Path, transferSlot: Int): PaperMenuConfiguration {
+    data class Prepared(val config: Config, val referencedTemplates: Set<String>)
+
+    fun load(dataRoot: Path, transferSlot: Int): PaperMenuConfiguration = parse(prepare(dataRoot), transferSlot)
+
+    /** File access and immutable projection; does not resolve native Material registry values. */
+    fun prepare(dataRoot: Path): Prepared {
         val persistentConfig = ConfigManager.of(dataRoot, RESOURCE)
         persistentConfig.mergeMissingFromBundled(RESOURCE)
         migrateMountSettings(persistentConfig)
@@ -75,12 +80,17 @@ internal object MountMenuConfiguration {
         config.keys(TEMPLATE_ROOT).filterNot(referencedTemplates::contains)
             .forEach { config.removeKey("$TEMPLATE_ROOT.$it") }
 
+        return Prepared(config, referencedTemplates)
+    }
+
+    /** Resolves the small native item-template catalogue on the server thread. */
+    fun parse(prepared: Prepared, transferSlot: Int): PaperMenuConfiguration {
         val parsed = PaperMenuConfigurationParser.require(
-            config,
+            prepared.config,
             LAYOUT_ROOT,
             TEMPLATE_ROOT,
             contracts,
-            requiredTemplates = referencedTemplates,
+            requiredTemplates = prepared.referencedTemplates,
             textContracts = mapOf("background" to PaperMenuTextContract()),
         )
         return parsed.withMountRuntimeLayouts(transferSlot)

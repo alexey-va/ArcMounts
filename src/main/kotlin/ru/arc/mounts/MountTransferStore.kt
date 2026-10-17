@@ -5,6 +5,8 @@ import ru.arc.onetime.OneTimeUseIdentity
 import ru.arc.persistence.AtomicFileStore
 import java.nio.file.Path
 import java.util.UUID
+import java.util.concurrent.CompletableFuture
+import ru.arc.core.BoundedAsyncExecutor
 
 enum class MountTransferStage { PACKING, PACKED, DELIVERING, AVAILABLE, CLAIMING, APPLIED, CONSUMED }
 
@@ -32,11 +34,14 @@ data class MountTransferRecord(
 
 interface MountTransferStore {
     fun records(): List<MountTransferRecord>
+    fun saveAsync(record: MountTransferRecord): CompletableFuture<Unit> =
+        runCatching { save(record) }.fold(CompletableFuture<Unit>::completedFuture, CompletableFuture<Unit>::failedFuture)
+    fun recordsFor(playerId: UUID): List<MountTransferRecord> = records().filter { it.issuer == playerId || it.recipient == playerId }
     fun save(record: MountTransferRecord)
     fun get(id: UUID): MountTransferRecord? = records().firstOrNull { it.id == id }
 }
 
-class FileMountTransferStore(root: Path) : MountTransferStore {
+class FileMountTransferStore(root: Path, private val writer: BoundedAsyncExecutor? = null) : MountTransferStore {
     private val file = AtomicFileStore(
         root, Path.of("data/mount-transfers.json"), 32L * 1024 * 1024,
         encode = { records: Array<MountTransferRecord> -> MountJson.prettyGson.toJson(records).toByteArray(Charsets.UTF_8) },
@@ -46,14 +51,28 @@ class FileMountTransferStore(root: Path) : MountTransferStore {
             records.forEach(MountTransferRecord::validate)
         },
     )
-    private var values = file.loadOrDefault { emptyArray() }.associateBy { it.id }
-    override fun records(): List<MountTransferRecord> = values.values.toList()
+    private data class View(val byId: Map<UUID, MountTransferRecord>, val records: List<MountTransferRecord>, val byPlayer: Map<UUID, List<MountTransferRecord>>)
+    @Volatile private var view = view(file.loadOrDefault { emptyArray() }.toList())
+    private fun view(records: List<MountTransferRecord>): View {
+        val byPlayer = mutableMapOf<UUID, MutableList<MountTransferRecord>>()
+        records.forEach { record ->
+            byPlayer.getOrPut(record.issuer, ::mutableListOf).add(record)
+            record.recipient?.takeIf { it != record.issuer }?.let { byPlayer.getOrPut(it, ::mutableListOf).add(record) }
+        }
+        return View(records.associateBy { it.id }, records, byPlayer)
+    }
+    override fun records(): List<MountTransferRecord> = view.records
+    override fun recordsFor(playerId: UUID): List<MountTransferRecord> = view.byPlayer[playerId].orEmpty()
+    override fun get(id: UUID): MountTransferRecord? = view.byId[id]
+    override fun saveAsync(record: MountTransferRecord): CompletableFuture<Unit> =
+        writer?.submit { save(record) } ?: super.saveAsync(record)
     override fun save(record: MountTransferRecord) {
         record.validate()
+        val values = view.byId
         val prior = values[record.id]
         require(prior == null || prior.copy(stage = record.stage, recipient = record.recipient) == record)
         require(prior == null || record.stage.ordinal >= prior.stage.ordinal)
         require(prior?.recipient == null || prior.recipient == record.recipient)
-        values = file.write((values + (record.id to record)).values.toTypedArray()).associateBy { it.id }
+        view = view(file.write((values + (record.id to record)).values.toTypedArray()).toList())
     }
 }

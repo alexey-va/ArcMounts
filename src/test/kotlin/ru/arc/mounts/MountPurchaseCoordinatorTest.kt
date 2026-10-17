@@ -7,6 +7,58 @@ import java.util.UUID
 import java.util.concurrent.CompletableFuture
 
 class MountPurchaseCoordinatorTest : StringSpec({
+    "purchase waits for each durable intent before money and permission effects" {
+        val fixture = PurchaseFixture()
+        val pending = ArrayDeque<Pair<MountPurchaseJournalRecord, CompletableFuture<Boolean>>>()
+        val delayed = object : MountPurchaseJournal by fixture.journal {
+            override fun persistAsync(record: MountPurchaseJournalRecord): CompletableFuture<Boolean> =
+                CompletableFuture<Boolean>().also { pending += record to it }
+        }
+        val coordinator = MountPurchaseCoordinator(fixture.ownership, fixture.wallet, delayed, { true }, { it() })
+        var result: MountPurchaseResult? = null
+        coordinator.purchaseLevel(fixture.subject(), fixture.mount, 1) { result = it }
+        fixture.wallet.withdrawals shouldBe 0
+        fixture.ownership.level shouldBe 0
+        result shouldBe null
+        val prepared = pending.removeFirst()
+        prepared.first.status shouldBe MountPurchaseJournalStatus.PREPARED
+        prepared.second.complete(fixture.journal.persist(prepared.first))
+        fixture.wallet.withdrawals shouldBe 0
+        val withdrawal = pending.removeFirst()
+        withdrawal.first.status shouldBe MountPurchaseJournalStatus.WITHDRAWAL_STARTED
+        withdrawal.second.complete(fixture.journal.persist(withdrawal.first))
+        fixture.wallet.withdrawals shouldBe 1
+        fixture.ownership.level shouldBe 0
+        while (pending.isNotEmpty()) {
+            val next = pending.removeFirst()
+            next.second.complete(fixture.journal.persist(next.first))
+        }
+        fixture.ownership.level shouldBe 1
+        fixture.wallet.withdrawals shouldBe 1
+        result shouldBe MountPurchaseResult.Success
+    }
+
+    "shutdown during durable preparation cannot resume money or ownership mutation" {
+        val fixture = PurchaseFixture()
+        val write = CompletableFuture<Boolean>()
+        var capturedRecord: MountPurchaseJournalRecord? = null
+        val delayed = object : MountPurchaseJournal by fixture.journal {
+            override fun persistAsync(record: MountPurchaseJournalRecord): CompletableFuture<Boolean> {
+                capturedRecord = record
+                return write
+            }
+        }
+        val coordinator = MountPurchaseCoordinator(fixture.ownership, fixture.wallet, delayed, { true }, { it() })
+        var result: MountPurchaseResult? = null
+        coordinator.purchaseLevel(fixture.subject(), fixture.mount, 1) { result = it }
+        coordinator.clear()
+        write.complete(fixture.journal.persist(requireNotNull(capturedRecord)))
+        fixture.wallet.withdrawals shouldBe 0
+        fixture.ownership.level shouldBe 0
+        result shouldBe null
+        fixture.journal.records().single().status shouldBe MountPurchaseJournalStatus.PREPARED
+    }
+
     "successful level purchase charges once and completes the durable journal" {
         val fixture = PurchaseFixture()
         var result: MountPurchaseResult? = null
