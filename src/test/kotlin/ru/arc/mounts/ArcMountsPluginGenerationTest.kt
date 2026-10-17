@@ -3,58 +3,46 @@ package ru.arc.mounts
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import ru.arc.paper.testing.MockBukkitTestRuntime
-import ru.arc.paper.testing.failOnUnsupportedMockBukkitOperation
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 class ArcMountsPluginGenerationTest : FunSpec({
-    test("re-enable waits for the exact previous durable drain and creates a fresh drain") {
-        failOnUnsupportedMockBukkitOperation {
-            MockBukkitTestRuntime.open().use { paper ->
-                val plugin = paper.loadSimplePlugin(ControlledArcMountsPlugin::class.java)
-                paper.performTicks(2)
-                plugin.starts shouldBe 1
-                val first = CompletableFuture<Unit>()
-                plugin.nextDrain = first
-                paper.server.pluginManager.disablePlugin(plugin)
-                // Idempotent duplicate disable must not replace the pending predecessor.
-                plugin.onDisable()
-                paper.server.pluginManager.enablePlugin(plugin)
-                paper.performTicks(2)
-                plugin.starts shouldBe 1
-                first.complete(Unit)
-                paper.performTicks(2)
-                plugin.starts shouldBe 2
-                val second = CompletableFuture<Unit>()
-                plugin.nextDrain = second
-                paper.server.pluginManager.disablePlugin(plugin)
-                paper.server.pluginManager.enablePlugin(plugin)
-                paper.performTicks(2)
-                plugin.starts shouldBe 2
-                second.complete(Unit)
-                paper.performTicks(2)
-                plugin.starts shouldBe 3
-                plugin.nextDrain = CompletableFuture.completedFuture(Unit)
+    test("startup is immediate and disable completes accepted IO before a direct re-enable") {
+        MockBukkitTestRuntime.open().use { paper ->
+            val plugin = paper.loadSimplePlugin(ControlledArcMountsPlugin::class.java)
+            plugin.starts shouldBe 1
+            val write = CompletableFuture<Unit>()
+            plugin.nextDrain = write
+            val returned = AtomicBoolean()
+            val writer = CompletableFuture.runAsync {
+                try {
+                    plugin.closeEntered.await(5, TimeUnit.SECONDS) shouldBe true
+                    returned.get() shouldBe false
+                } finally { write.complete(Unit) }
             }
+            paper.server.pluginManager.disablePlugin(plugin)
+            returned.set(true)
+            writer.get(5, TimeUnit.SECONDS)
+            write.isDone shouldBe true
+            plugin.onDisable()
+            plugin.closes shouldBe 1
+            paper.server.pluginManager.enablePlugin(plugin)
+            plugin.starts shouldBe 2
+            plugin.nextDrain = CompletableFuture.completedFuture(Unit)
         }
     }
 
-    test("a superseded waiting generation cannot activate after its predecessor drains") {
-        failOnUnsupportedMockBukkitOperation {
-            MockBukkitTestRuntime.open().use { paper ->
-                val plugin = paper.loadSimplePlugin(ControlledArcMountsPlugin::class.java)
-                paper.performTicks(2)
-                val old = CompletableFuture<Unit>()
-                plugin.nextDrain = old
-                paper.server.pluginManager.disablePlugin(plugin)
-                paper.server.pluginManager.enablePlugin(plugin)
-                paper.server.pluginManager.disablePlugin(plugin)
-                paper.server.pluginManager.enablePlugin(plugin)
-                old.complete(Unit)
-                paper.performTicks(3)
-                plugin.starts shouldBe 2
-                plugin.closes shouldBe 1
-                plugin.nextDrain = CompletableFuture.completedFuture(Unit)
-            }
+    test("a failed storage drain is reported after native detach without scheduling a new generation") {
+        MockBukkitTestRuntime.open().use { paper ->
+            val plugin = paper.loadSimplePlugin(ControlledArcMountsPlugin::class.java)
+            plugin.nextDrain = CompletableFuture.failedFuture(IllegalStateException("storage close failed"))
+            paper.server.pluginManager.disablePlugin(plugin)
+            plugin.closes shouldBe 1
+            plugin.starts shouldBe 1
+            paper.performTicks(2)
+            plugin.starts shouldBe 1
         }
     }
 })
@@ -63,6 +51,11 @@ open class ControlledArcMountsPlugin : ArcMountsPlugin() {
     var starts = 0
     var closes = 0
     var nextDrain = CompletableFuture.completedFuture(Unit)
+    val closeEntered = CountDownLatch(1)
     override fun startGeneration() { starts++ }
-    override fun closeGeneration(): CompletableFuture<Unit> { closes++; return nextDrain }
+    override fun closeGeneration(): CompletableFuture<Unit> {
+        closes++
+        closeEntered.countDown()
+        return nextDrain
+    }
 }

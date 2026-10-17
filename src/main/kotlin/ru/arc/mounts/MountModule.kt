@@ -17,7 +17,6 @@ import ru.arc.core.BudgetedTaskQueue
 import ru.arc.config.ConfigManager
 import ru.arc.paper.api.ArcRedisService
 import ru.arc.onetime.OneTimeUseLedger
-import java.util.concurrent.CancellationException
 import ru.arc.paper.menu.PaperMenuRuntime
 import ru.arc.paper.redis.PaperRedisClient
 import ru.arc.mounts.api.ArcMountConfiguration
@@ -58,109 +57,71 @@ internal class MountModule(
     private val dataPath = hostConfiguration.dataPath()
     private val nativeScope = LifecycleTaskScope(scheduler)
     private var nativeQueue = BudgetedTaskQueue(nativeScope)
-    @Volatile private var generation = 0L
     @Volatile private var closed = false
     private var transferConfig: MountTransferConfig? = null
-    // A cold acquire racing disable remains owned until the worker terminal drain.
+    // Shared leases outlive every accepted gameplay write and close during the terminal drain.
     private val storageResources = ConcurrentHashMap.newKeySet<AutoCloseable>()
     private val rewardGrant = MountRewardGrant()
 
     internal fun currentBackgroundStyle(): MountGuiItemStyle? = config?.guiStyle(MountGuiItemRole.BACKGROUND)
 
-    fun init(): CompletableFuture<Unit> {
+    fun init() {
         bindUnavailableCommands()
-        return prepareAndStart(reload = false)
+        prepareAndStart(reload = false)
     }
 
-    fun reload(): CompletableFuture<Unit> {
+    fun reload() {
         shutdownRuntime()
         nativeScope.restart()
         nativeQueue = BudgetedTaskQueue(nativeScope)
-        return prepareAndStart(reload = true)
+        prepareAndStart(reload = true)
     }
 
-    private fun prepareAndStart(reload: Boolean): CompletableFuture<Unit> {
+    private fun prepareAndStart(reload: Boolean) {
         check(!closed)
-        val token = ++generation
-        val scopeToken = nativeScope.token()
-        return hostConfiguration.ready().thenCompose {
-            nativeScope.callSync(scopeToken) {
-                check(!closed && token == generation) { "Mount preparation superseded" }
-                prepareReady(reload, token)
-            }.thenCompose { it }
-        }
-    }
-
-    private fun prepareReady(reload: Boolean, token: Long): CompletableFuture<Unit> {
+        val ready = hostConfiguration.ready()
+        check(ready.isDone) { "ARC host must be ready before Mounts preparation" }
+        ready.getNow(null)
         val redisService = if (hostConfiguration.sharedRedisAvailable()) {
             plugin.server.servicesManager.load(ArcRedisService::class.java)
         } else null
         val ownerName = plugin.name
-        val result = CompletableFuture<Unit>()
-        val scopeToken = nativeScope.token()
-        io.submit {
-            if (reload) ConfigManager.reloadAll()
-            val config = MountModuleConfig.load(dataPath, nativeValidation = false)
-            val transfer = MountTransferConfig.load(dataPath)
-            val menus = MountMenuConfiguration.prepare(dataPath)
-            val policy = MountCareBoostPolicy.load(dataPath)
-            val catalog = config.catalog()
-            val enabled = config.enabled && config.ownershipMigrationComplete
-            val journal = if (enabled) FileMountPurchaseJournal(dataPath.resolve("data/mount-purchases.json"), writer = io) else null
-            val redis = if (enabled && redisService != null) runCatching {
-                PaperRedisClient.openPrimary(redisService, ownerName).also { storageResources += it; it.retainDuringShutdown(); it.init() }
-            }.onFailure { warn("Mount care boost Redis lease unavailable: {}", it.javaClass.simpleName) }.getOrNull() else null
-            var ledger: OneTimeUseLedger? = null
-            var transfers: FileMountTransferStore? = null
-            if (enabled && transfer.enabled && config.purchasesEnabled) {
-                runCatching {
-                    transfers = FileMountTransferStore(dataPath, io)
-                    ledger = MySqlOneTimeUseLedger.open(
-                        transfer.sql(), "ARC-mount-transfers", "arc_mount_transfers",
-                        listOf(MySqlOneTimeUseLedger.createTableMigration(1)), MySqlOneTimeUsePartition("arc.mount-transfer"),
-                    ).also { storageResources += it }
-                }.onFailure { warn("Mount transfers unavailable: {}", it.javaClass.simpleName) }
-            }
-            Prepared(config, catalog, transfer, menus, policy, journal, redis, ledger, transfers)
-        }.whenComplete { prepared, failure ->
-            if (closed || token != generation) {
-                prepared?.let(::retirePrepared)
-                result.completeExceptionally(CancellationException("Mount preparation superseded"))
-            } else if (failure != null) {
-                result.completeExceptionally(failure)
-            } else {
-                nativeScope.callSync(scopeToken) {
-                    check(!closed && token == generation) { "Mount preparation superseded" }
-                    menuRuntime.replace(MountMenuConfiguration.parse(prepared.menus, prepared.transfer.detailSlot))
-                    start(prepared)
-                }.whenComplete { _, activationFailure ->
-                    if (activationFailure == null) result.complete(Unit)
-                    else {
-                        retirePrepared(prepared)
-                        result.completeExceptionally(activationFailure)
-                    }
-                }
-            }
+        if (reload) ConfigManager.reloadAll()
+        val config = MountModuleConfig.load(dataPath, nativeValidation = false)
+        val transfer = MountTransferConfig.load(dataPath)
+        val menus = MountMenuConfiguration.prepare(dataPath)
+        val policy = MountCareBoostPolicy.load(dataPath)
+        val catalog = config.catalog()
+        val enabled = config.enabled && config.ownershipMigrationComplete
+        val journal = if (enabled) FileMountPurchaseJournal(dataPath.resolve("data/mount-purchases.json"), writer = io) else null
+        val redis = if (enabled && redisService != null) runCatching {
+            PaperRedisClient.openPrimary(redisService, ownerName).also { storageResources += it; it.retainDuringShutdown(); it.init() }
+        }.onFailure { warn("Mount care boost Redis lease unavailable: {}", it.javaClass.simpleName) }.getOrNull() else null
+        var ledger: OneTimeUseLedger? = null
+        var transfers: FileMountTransferStore? = null
+        if (enabled && transfer.enabled && config.purchasesEnabled) {
+            runCatching {
+                transfers = FileMountTransferStore(dataPath, io)
+                ledger = MySqlOneTimeUseLedger.open(
+                    transfer.sql(), "ARC-mount-transfers", "arc_mount_transfers",
+                    listOf(MySqlOneTimeUseLedger.createTableMigration(1)), MySqlOneTimeUsePartition("arc.mount-transfer"),
+                ).also { storageResources += it }
+            }.onFailure { warn("Mount transfers unavailable: {}", it.javaClass.simpleName) }
         }
-        return result
+        menuRuntime.replace(MountMenuConfiguration.parse(menus, transfer.detailSlot))
+        start(Prepared(config, catalog, transfer, policy, journal, redis, ledger, transfers))
     }
 
     private data class Prepared(
         val config: MountModuleConfig,
         val catalog: MountCatalog,
         val transfer: MountTransferConfig,
-        val menus: MountMenuConfiguration.Prepared,
         val carePolicy: MountCareBoostPolicy,
         val journal: FileMountPurchaseJournal?,
         val redis: PaperRedisClient?,
         val ledger: OneTimeUseLedger?,
         val transfers: FileMountTransferStore?,
     )
-
-    private fun retirePrepared(prepared: Prepared) {
-        prepared.ledger?.let(::retireStorage)
-        prepared.redis?.let(::retireStorage)
-    }
 
     private fun retireStorage(resource: AutoCloseable) {
         io.submit {
@@ -188,7 +149,6 @@ internal class MountModule(
     override fun close() {
         if (closed) return
         closed = true
-        generation++
         shutdownRuntime()
         config = null
         catalog = null
@@ -240,7 +200,8 @@ internal class MountModule(
         val luckPerms = plugin.server.servicesManager.load(LuckPerms::class.java)
         if (luckPerms == null) {
             warn("Mounts module disabled because LuckPerms API is unavailable")
-            retirePrepared(prepared)
+            prepared.ledger?.let(::retireStorage)
+            prepared.redis?.let(::retireStorage)
             return
         }
 

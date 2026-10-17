@@ -31,42 +31,19 @@ open class ArcMountsPlugin : JavaPlugin(), ArcMountService {
     @Volatile private var prepared = false
     @Volatile private var hostRedisAvailable = false
     private var shutdownDrain = CompletableFuture.completedFuture(Unit)
-    private var predecessorDrain = CompletableFuture.completedFuture(Unit)
-    private var enableScope: ru.arc.core.LifecycleTaskScope? = null
-    private var generationOpen = false
-    private var generationStarted = false
+    private var lifecycleOpen = false
 
     override fun onEnable() {
-        check(!generationOpen) { "Plugin generation is already open" }
-        generationOpen = true
-        generationStarted = false
-        predecessorDrain = shutdownDrain
-        shutdownDrain = CompletableFuture()
-        val scope = ru.arc.core.LifecycleTaskScope(ru.arc.core.BukkitTaskScheduler(this))
-        enableScope = scope
-        val token = scope.token()
-        predecessorDrain.whenComplete { _, failure ->
-            scope.callSync(token) {
-                if (enableScope !== scope || !generationOpen) return@callSync
-                if (failure != null) {
-                    logger.log(Level.SEVERE, "Previous plugin generation failed to drain; startup remains closed", failure)
-                    server.pluginManager.disablePlugin(this)
-                } else {
-                    generationStarted = true
-                    startGeneration()
-                }
-            }.whenComplete { _, startFailure ->
-                if (startFailure != null) scope.callSync(token) {
-                    if (enableScope === scope && generationOpen) {
-                        logger.log(Level.SEVERE, "Plugin generation startup failed closed", startFailure)
-                        server.pluginManager.disablePlugin(this)
-                    }
-                }
-            }
-        }
+        check(!lifecycleOpen) { "Plugin lifecycle is already open" }
+        try {
+            check(shutdownDrain.isDone) { "Previous storage cleanup is still pending" }
+            shutdownDrain.getNow(Unit)
+            lifecycleOpen = true
+            shutdownDrain = CompletableFuture()
+            startGeneration()
+        } catch (failure: Throwable) { failStartup(failure) }
     }
 
-    /** Cold preparation starts only after the exact predecessor's terminal writer/lease drain. */
     protected open fun startGeneration() {
         val host = server.servicesManager.load(ArcMountConfiguration::class.java)
             ?: error("Required ARC ArcMountConfiguration is not registered")
@@ -94,65 +71,30 @@ open class ArcMountsPlugin : JavaPlugin(), ArcMountService {
         local.own(AutoCloseable { server.servicesManager.unregister(ArcMountService::class.java, this) })
         server.servicesManager.register(ArcMountService::class.java, this, this, ServicePriority.Normal)
         val io = BoundedAsyncExecutor("arc-mounts-storage").also { storage = it }
-        host.ready().whenComplete { _, failure ->
-            if (runtime === local) scheduler.runSync(Runnable {
-                if (runtime !== local) return@Runnable
-                if (failure != null) failStartup(failure)
-                else prepareMounts(host, local, scheduler, metrics, io)
-            })
-        }
-    }
-
-    private fun prepareMounts(
-        host: ru.arc.mounts.api.ArcMountConfiguration,
-        local: PaperPluginRuntime,
-        scheduler: ru.arc.core.TaskScheduler,
-        metrics: MountTechnicalMetrics,
-        io: BoundedAsyncExecutor,
-    ) {
+        val ready = host.ready()
+        check(ready.isDone) { "ARC host must be ready before ArcMounts starts" }
+        ready.getNow(null)
         hostRedisAvailable = host.sharedRedisAvailable()
         val dataPath = host.dataPath()
-        io.submit {
-            val transfer = MountTransferConfig.load(dataPath)
-            MountMenuConfiguration.prepare(dataPath) to transfer.detailSlot
-        }.whenComplete { preparedMenus, failure ->
-            if (runtime !== local) return@whenComplete
-            scheduler.runSync(Runnable {
-                if (runtime !== local) return@Runnable
-                if (failure != null) {
-                    failStartup(failure)
-                    return@Runnable
-                }
-                try {
-                    val menus = local.own(PaperMenuRuntime(this, scheduler, MountMenuConfiguration.parse(preparedMenus.first, preparedMenus.second)))
-                    val loaded = MountModule(
-                        plugin = this,
-                        hostConfiguration = host,
-                        scheduler = scheduler,
-                        visibilityProvider = { server.servicesManager.load(ArcMountVisibility::class.java) },
-                        metrics = metrics,
-                        telemetry = MountTelemetry(this),
-                        menuRuntime = menus,
-                        io = io,
-                    )
-                    module = loaded
-                    local.own(AutoCloseable { loaded.close(); module = null })
-                    loaded.init().whenComplete { _, initFailure ->
-                        if (runtime === local) scheduler.runSync(Runnable ready@{
-                            if (runtime !== local) return@ready
-                            if (initFailure != null) failStartup(initFailure)
-                            else {
-                                prepared = true
-                                local.ready("mountsEnabled" to loaded.isModuleActive())
-                                logger.info("ArcMounts enabled with ARC-owned configuration and host services")
-                            }
-                        })
-                    }
-                } catch (activationFailure: Throwable) {
-                    failStartup(activationFailure)
-                }
-            })
-        }
+        val transfer = MountTransferConfig.load(dataPath)
+        val preparedMenus = MountMenuConfiguration.prepare(dataPath)
+        val menus = local.own(PaperMenuRuntime(this, scheduler, MountMenuConfiguration.parse(preparedMenus, transfer.detailSlot)))
+        val loaded = MountModule(
+            plugin = this,
+            hostConfiguration = host,
+            scheduler = scheduler,
+            visibilityProvider = { server.servicesManager.load(ArcMountVisibility::class.java) },
+            metrics = metrics,
+            telemetry = MountTelemetry(this),
+            menuRuntime = menus,
+            io = io,
+        )
+        module = loaded
+        local.own(AutoCloseable { loaded.close(); module = null })
+        loaded.init()
+        prepared = true
+        local.ready("mountsEnabled" to loaded.isModuleActive())
+        logger.info("ArcMounts enabled with ARC-owned configuration and host services")
     }
 
     private fun failStartup(failure: Throwable) {
@@ -161,17 +103,15 @@ open class ArcMountsPlugin : JavaPlugin(), ArcMountService {
     }
 
     override fun onDisable() {
-        if (!generationOpen) return
-        generationOpen = false
-        enableScope?.close()
-        enableScope = null
-        val completion = shutdownDrain
-        val previous = predecessorDrain
-        val retiring = if (generationStarted) runCatching { closeGeneration() }.getOrElse { CompletableFuture.failedFuture(it) }
-            else CompletableFuture.completedFuture(Unit)
-        generationStarted = false
-        CompletableFuture.allOf(previous, retiring).whenComplete { _, failure ->
-            if (failure == null) completion.complete(Unit) else completion.completeExceptionally(failure)
+        if (!lifecycleOpen) return
+        lifecycleOpen = false
+        try {
+            // Accepted writes and SQL advisory-lock cleanup need no further Paper callback.
+            closeGeneration().join()
+            shutdownDrain.complete(Unit)
+        } catch (failure: Throwable) {
+            shutdownDrain.completeExceptionally(failure)
+            logger.log(Level.SEVERE, "Could not close ArcMounts storage", failure)
         }
     }
 
@@ -242,18 +182,14 @@ open class ArcMountsPlugin : JavaPlugin(), ArcMountService {
         check(org.bukkit.Bukkit.isPrimaryThread()) { "Mounts reload must run on the primary server thread" }
         prepared = false
         local.reload()
-        module?.reload()?.whenComplete { _, failure ->
-            if (runtime === local) Tasks.scheduler.runSync(Runnable {
-                if (runtime !== local) return@Runnable
-                if (failure != null) {
-                    logger.log(Level.SEVERE, "ArcMounts reload failed closed", failure)
-                    local.health.markDown()
-                } else {
-                    prepared = true
-                    local.reportHealthEvery(20L * 60L)
-                    local.ready("reload" to true)
-                }
-            })
+        try {
+            module?.reload()
+            prepared = true
+            local.reportHealthEvery(20L * 60L)
+            local.ready("reload" to true)
+        } catch (failure: Throwable) {
+            logger.log(Level.SEVERE, "ArcMounts reload failed closed", failure)
+            local.health.markDown()
         }
     }
 
