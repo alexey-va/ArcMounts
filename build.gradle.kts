@@ -146,6 +146,7 @@ tasks.shadowJar {
     exclude("ru/arc/paper/redis/PaperRedisServiceProvider*.class")
     exclude("ru/arc/paper/redis/SharedPaperRedisService*.class")
     exclude("ru/arc/paper/metrics/PaperArcMetricsProvider*.class")
+    exclude("ru/arc/paper/runtime/PaperNativeCleanupServiceProvider*.class")
     exclude("org/bukkit/**")
     exclude("io/papermc/**")
 }
