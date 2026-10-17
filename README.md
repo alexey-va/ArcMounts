@@ -33,4 +33,4 @@ the plugin JAR/POM and the API JAR, sources JAR, POM, and Gradle module metadata
 to the public RusCrafting Maven repository. There is no GitHub Release step.
 
 The local `arcCoreDir` Gradle property can point to an `arc-core` checkout for
-composite development. CI uses the immutable `2.7.29` Maven release.
+composite development. CI uses the immutable `2.7.30` Maven release.
