@@ -1,0 +1,12 @@
+# The host's same-named catalog deliberately contains no ArcMounts layouts.
+menus:
+  layouts:
+    host-only:
+      schema-version: 1
+      rows: 1
+      elements:
+        info: { slot: 4, template: host-info }
+  templates:
+    host-info:
+      material: PAPER
+      name: Operator host menu

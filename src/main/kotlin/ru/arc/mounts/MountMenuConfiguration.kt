@@ -20,6 +20,7 @@ import java.nio.file.Path
 /** Mounts-owned projection of the operator's shared GUI file. The filtered view is never saved. */
 internal object MountMenuConfiguration {
     const val RESOURCE = "guis/menus.yml"
+    private const val BUNDLED_RESOURCE = "guis/mounts-defaults.yml"
     private const val LAYOUT_ROOT = "menus.layouts"
     private const val TEMPLATE_ROOT = "menus.templates"
 
@@ -58,7 +59,7 @@ internal object MountMenuConfiguration {
     /** File access and immutable projection; does not resolve native Material registry values. */
     fun prepare(dataRoot: Path): Prepared {
         val persistentConfig = ConfigManager.of(dataRoot, RESOURCE)
-        persistentConfig.mergeMissingFromBundled(RESOURCE)
+        mergeBundledDefaults(persistentConfig)
         migrateMountSettings(persistentConfig)
 
         // This is an in-memory projection of the shared host file. Never filter the
@@ -191,7 +192,7 @@ internal object MountMenuConfiguration {
     private fun migrateMountSettings(config: Config) {
         val detailPath = "$LAYOUT_ROOT.mount-detail"
         val oldGlowSlot = config.intOrNull("$detailPath.elements.glow.slot") ?: return
-        config.mergeMissingFromBundled(RESOURCE)
+        mergeBundledDefaults(config)
         config.setInt("$detailPath.elements.settings.slot", oldGlowSlot)
         config.setString(
             "$detailPath.elements.settings.template",
@@ -208,6 +209,19 @@ internal object MountMenuConfiguration {
             config.setInt("$tuningPath.elements.rider-view.slot", 49)
         }
         config.saveStrict()
+    }
+
+    private fun mergeBundledDefaults(config: Config) {
+        // Core may be loaded by the host, whose shared menus.yml has no mount layouts.
+        // The unique resource is resolved through this child plugin's loader on the IO worker.
+        val thread = Thread.currentThread()
+        val previousLoader = thread.contextClassLoader
+        try {
+            thread.contextClassLoader = MountMenuConfiguration::class.java.classLoader
+            config.mergeMissingFromBundled(BUNDLED_RESOURCE)
+        } finally {
+            thread.contextClassLoader = previousLoader
+        }
     }
 
     private fun elements(vararg ids: String): Set<MenuElementId> = ids.mapTo(linkedSetOf(), MenuElementId::of)
