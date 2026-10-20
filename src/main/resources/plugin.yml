@@ -4,6 +4,7 @@ main: ru.arc.mounts.ArcMountsPlugin
 api-version: '1.20'
 depend: [ARC]
 softdepend:
+  - ArcRanks
   - packetevents
   - LuckPerms
   - Citizens

@@ -51,6 +51,7 @@ dependencies {
     implementation("ru.ruscrafting.arc:arc-core-sql:2.7.41")
 
     compileOnly(project(":arc-mounts-api"))
+    compileOnly("ru.ruscrafting.arc:arc-ranks-api:0.1.0")
     compileOnly("ru.ruscrafting.arc:arc-core-paper-api:2.7.41")
     compileOnly("io.papermc.paper:paper-api:26.1.2.build.+")
     compileOnly("net.citizensnpcs:citizens-main:2.0.42-SNAPSHOT") {
@@ -63,6 +64,7 @@ dependencies {
 
     testImplementation("ru.ruscrafting.arc:arc-core-paper-testing:2.7.41")
     testImplementation(project(":arc-mounts-api"))
+    testImplementation("ru.ruscrafting.arc:arc-ranks-api:0.1.0")
     testImplementation("ru.ruscrafting.arc:arc-core-paper-api:2.7.41")
     testImplementation(platform("org.junit:junit-bom:6.0.3"))
     testImplementation("org.junit.jupiter:junit-jupiter-api")
@@ -139,6 +141,8 @@ tasks.shadowJar {
 
     // ARC owns these shared service contracts and provider implementations.
     exclude("ru/arc/mounts/api/**")
+    exclude("ru/ruscrafting/ranks/api/**")
+    exclude("ru/ruscrafting/ranks/storage/ExternalProgressResult.class")
     exclude("ru/arc/paper/api/**")
     exclude("ru/arc/paper/packet/PaperVisualPacketRuntime*.class")
     exclude("ru/arc/paper/sql/PaperSqlServiceProvider*.class")

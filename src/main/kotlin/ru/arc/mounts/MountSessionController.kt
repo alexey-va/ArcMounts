@@ -112,7 +112,9 @@ private data class MountSession(
     var previousBoundingBox: BoundingBox? = null,
     val trampleDamageAtMillis: MutableMap<UUID, Long> = hashMapOf(),
     val startedAtMillis: Long = System.currentTimeMillis(),
-)
+) {
+    val questDistance = MountRideDistance(entityId, playerId, startedAtMillis)
+}
 
 class MountSessionController internal constructor(
     private val plugin: JavaPlugin,
@@ -127,6 +129,7 @@ class MountSessionController internal constructor(
         MountCareBoostStatus(record = null, active = false, remainingMillis = 0L, nextClaimInMillis = 0L)
     },
     private val recordProductOutcome: (Player, String) -> Unit = { _, _ -> },
+    private val questProgress: MountQuestIntegration? = null,
     private val recordActivity: (UUID, String, String?, String?, Map<String, String>) -> Unit = { _, _, _, _, _ -> },
     private val dataPath: Path = plugin.dataFolder.toPath(),
 ) : Listener {
@@ -160,6 +163,11 @@ class MountSessionController internal constructor(
         sessionsByPlayer.clear()
         playerByEntity.clear()
         pendingSpawnTokens.clear()
+    }
+
+    internal fun flushQuestProgress() {
+        val now = System.currentTimeMillis()
+        sessionsByPlayer.values.forEach { session -> session.questDistance.flush(now)?.let { questProgress?.record(it) } }
     }
 
     fun shutdown() {
@@ -391,6 +399,7 @@ class MountSessionController internal constructor(
         val session = sessionsByPlayer.remove(playerId) ?: return
         if (session.stopping) return
         session.stopping = true
+        session.questDistance.flush(System.currentTimeMillis())?.let { questProgress?.record(it) }
         recordActivity(
             playerId,
             "mount.ride_ended",
@@ -615,6 +624,7 @@ class MountSessionController internal constructor(
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     fun onTeleport(event: PlayerTeleportEvent) {
         val session = sessionsByPlayer[event.player.uniqueId] ?: return
+        session.questDistance.discontinuity()
         if (session.definition.control == MountControl.PLAYER_FLIGHT) {
             remove(event.player.uniqueId, MountRemovalReason.TELEPORTED)
             return
@@ -664,6 +674,10 @@ class MountSessionController internal constructor(
                     remove(session.playerId, MountRemovalReason.LEFT_WATER)
                 }
                 else -> {
+                    if (questProgress != null && location != null) {
+                        session.questDistance.observe(MountRidePoint(location.world.uid, location.x, location.y, location.z), now)
+                            ?.let(questProgress::record)
+                    }
                     session.input = player.currentInput.toState()
                     if (session.input.hasMovementIntent) session.lastActiveAtMillis = now
                     session.ticks++

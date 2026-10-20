@@ -48,6 +48,7 @@ internal class MountModule(
     private var journal: MountPurchaseJournal? = null
     private var purchases: MountPurchaseCoordinator? = null
     private var sessions: MountSessionController? = null
+    private var questEligibility: AutoCloseable? = null
     private var quickSummons: MountQuickSummonController? = null
     private var gui: MountGuiController? = null
     private var transfers: MountTransferController? = null
@@ -206,6 +207,14 @@ internal class MountModule(
         }
 
         val loadedOwnership = LuckPermsMountOwnership(luckPerms)
+        val quests = if (plugin.server.pluginManager.isPluginEnabled("ArcRanks")) {
+            questEligibility = MountQuestIntegration.registerEligibility(plugin) { playerId ->
+                ownedMountQuestEligibility(catalog?.all, ownership, loadedOwnership.isUserCached(playerId), playerId)
+            }
+            MountQuestIntegration(nativeScope, {
+                plugin.server.servicesManager.load(ru.ruscrafting.ranks.api.RankQuestApi::class.java)
+            }, plugin.logger)
+        } else null
         val wallet = HostMountWallet(plugin)
         val journal = requireNotNull(prepared.journal)
         this.journal = journal
@@ -230,6 +239,7 @@ internal class MountModule(
                 synchronizePassengers = { player, vehicles -> visibility?.synchronizePassengersFor(player, vehicles) },
                 careBoostStatusProvider = { playerId, nowMillis -> loadedCareBoosts.cachedStatus(playerId, nowMillis) },
                 recordProductOutcome = telemetry::recordProductOutcome,
+                questProgress = quests,
                 recordActivity = telemetry::recordActivity,
                 dataPath = dataPath,
             )
@@ -347,6 +357,9 @@ internal class MountModule(
     }
 
     private fun shutdownRuntime() {
+        sessions?.flushQuestProgress()
+        questEligibility?.close()
+        questEligibility = null
         nativeQueue.close()
         nativeScope.cancelAll()
         rewardGrant.close()

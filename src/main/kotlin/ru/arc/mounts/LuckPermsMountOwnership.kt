@@ -8,6 +8,8 @@ import java.util.UUID
 import java.util.concurrent.CompletableFuture
 
 class LuckPermsMountOwnership(private val luckPerms: LuckPerms) : MountOwnership {
+    internal fun isUserCached(playerId: UUID): Boolean = luckPerms.userManager.getUser(playerId) != null
+
     override fun profile(subject: MountPermissionSubject, mount: MountDefinition): MountProfile {
         val user = luckPerms.userManager.getUser(subject.uniqueId)
         val permissionData = user?.let {
