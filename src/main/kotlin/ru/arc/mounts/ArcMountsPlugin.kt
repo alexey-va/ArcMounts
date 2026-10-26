@@ -17,6 +17,7 @@ import ru.arc.mounts.api.ArcMountService
 import ru.arc.mounts.api.ArcMountVisibility
 import ru.arc.paper.menu.PaperMenuRuntime
 import ru.arc.paper.runtime.PaperPluginRuntime
+import ru.arc.paper.runtime.PaperPluginHotload
 import ru.arc.paper.sql.PaperSqlServices
 import java.util.Optional
 import java.util.UUID
@@ -32,10 +33,16 @@ open class ArcMountsPlugin : JavaPlugin(), ArcMountService {
     @Volatile private var hostRedisAvailable = false
     private var shutdownDrain = CompletableFuture.completedFuture(Unit)
     private var lifecycleOpen = false
+    private val hotload = PaperPluginHotload(this) {
+        stopRuntime()
+        mapOf("storage" to shutdownDrain)
+    }
 
     override fun onEnable() {
         check(!lifecycleOpen) { "Plugin lifecycle is already open" }
         try {
+            hotload.beginGeneration()
+            hotload.register()
             check(shutdownDrain.isDone) { "Previous storage cleanup is still pending" }
             shutdownDrain.getNow(Unit)
             lifecycleOpen = true
@@ -103,6 +110,11 @@ open class ArcMountsPlugin : JavaPlugin(), ArcMountService {
     }
 
     override fun onDisable() {
+        hotload.prepare()
+        hotload.close()
+    }
+
+    private fun stopRuntime() {
         if (!lifecycleOpen) return
         lifecycleOpen = false
         try {
@@ -121,7 +133,16 @@ open class ArcMountsPlugin : JavaPlugin(), ArcMountService {
         val retiringModule = module
         runtime = null
         prepared = false
-        val nativeFailure = runCatching { retiring?.close() }.exceptionOrNull()
+        var nativeFailure: Throwable? = null
+        for (close in listOf<() -> Unit>(
+            { retiring?.close() },
+            { hotload.retireGameplayRegistrations() },
+            { ru.arc.logging.ArcLogging.close() },
+        )) {
+            try { close() } catch (failure: Throwable) {
+                if (nativeFailure == null) nativeFailure = failure else nativeFailure.addSuppressed(failure)
+            }
+        }
         module = null
         val retiringStorage = storage
         storage = null

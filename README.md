@@ -33,7 +33,7 @@ the plugin JAR/POM and the API JAR, sources JAR, POM, and Gradle module metadata
 to the public RusCrafting Maven repository. There is no GitHub Release step.
 
 The local `arcCoreDir` Gradle property can point to an `arc-core` checkout for
-composite development. CI uses the immutable `2.7.33` Maven release.
+composite development. CI uses the immutable `2.7.69` Maven release.
 ## Daily quest integration
 
 With ArcRanks enabled, `MountQuestEligibility` exposes a cache-only ownership

@@ -62,6 +62,8 @@ internal class MountModule(
     private var transferConfig: MountTransferConfig? = null
     // Shared leases outlive every accepted gameplay write and close during the terminal drain.
     private val storageResources = ConcurrentHashMap.newKeySet<AutoCloseable>()
+    // Worker-confined; a failed retired lease remains part of terminal readiness.
+    private var storageRetirementFailure: Throwable? = null
     private val rewardGrant = MountRewardGrant()
 
     internal fun currentBackgroundStyle(): MountGuiItemStyle? = config?.guiStyle(MountGuiItemRole.BACKGROUND)
@@ -124,10 +126,13 @@ internal class MountModule(
         val transfers: FileMountTransferStore?,
     )
 
-    private fun retireStorage(resource: AutoCloseable) {
-        io.submit {
-            try { closeStorageResource(resource) } finally { storageResources.remove(resource) }
-        }
+    internal fun retireStorage(resource: AutoCloseable): CompletableFuture<Unit> = io.submit {
+        try { closeStorageResource(resource) } catch (problem: Throwable) {
+            val previous = storageRetirementFailure
+            if (previous == null) storageRetirementFailure = problem
+            else if (previous !== problem) previous.addSuppressed(problem)
+            throw problem
+        } finally { storageResources.remove(resource) }
         // If shutdown sealed admission, closeStorageResources owns the retained resource.
     }
 
@@ -138,7 +143,7 @@ internal class MountModule(
 
     /** Worker terminal finalizer, after all accepted prepares and durable writes. */
     internal fun closeStorageResources() {
-        var failure: Throwable? = null
+        var failure: Throwable? = storageRetirementFailure
         storageResources.forEach { resource ->
             try { closeStorageResource(resource) } catch (problem: Throwable) {
                 if (failure == null) failure = problem else failure.addSuppressed(problem)
@@ -150,9 +155,10 @@ internal class MountModule(
     override fun close() {
         if (closed) return
         closed = true
-        shutdownRuntime()
-        config = null
-        catalog = null
+        try { shutdownRuntime() } finally {
+            config = null
+            catalog = null
+        }
     }
 
     fun summonFavorite(player: org.bukkit.entity.Player): Boolean = quickSummons?.summonFavorite(player) ?: false
@@ -357,33 +363,40 @@ internal class MountModule(
     }
 
     private fun shutdownRuntime() {
-        sessions?.flushQuestProgress()
-        questEligibility?.close()
+        var failure: Throwable? = null
+        fun attempt(close: () -> Unit) {
+            try { close() } catch (problem: Throwable) {
+                if (failure == null) failure = problem else failure.addSuppressed(problem)
+            }
+        }
+        attempt { sessions?.flushQuestProgress() }
+        attempt { questEligibility?.close() }
         questEligibility = null
-        nativeQueue.close()
-        nativeScope.cancelAll()
-        rewardGrant.close()
-        bindUnavailableCommands()
-        careBoostHydration?.close()
+        attempt { nativeQueue.close() }
+        attempt { nativeScope.cancelAll() }
+        attempt { rewardGrant.close() }
+        attempt { bindUnavailableCommands() }
+        attempt { careBoostHydration?.close() }
         careBoostHydration = null
-        careBoosts?.close()
+        attempt { careBoosts?.close() }
         careBoosts = null
-        redisClient?.let(::retireStorage)
+        attempt { redisClient?.let(::retireStorage) }
         redisClient = null
-        transfers?.close()
+        attempt { transfers?.close() }
         transfers = null
-        gui?.shutdown()
+        attempt { gui?.shutdown() }
         gui = null
-        quickSummons?.shutdown()
+        attempt { quickSummons?.shutdown() }
         quickSummons = null
-        sessions?.shutdown()
+        attempt { sessions?.shutdown() }
         sessions = null
-        purchases?.clear()
+        attempt { purchases?.clear() }
         purchases = null
         journal = null
         ownership = null
         catalog = null
-        publishMetrics()
+        attempt { publishMetrics() }
+        failure?.let { throw it }
     }
 
     private fun refreshCareBoostedMount(
